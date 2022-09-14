@@ -9,7 +9,7 @@ MashID works with Illumina (paired-end or single-end), Ion Torrent, Nanopore and
 ## Installation
 ```commandline
 # Create and activate virtual envrionment
-conda create -n mashID -y -c bioconda mash=2.3
+conda create -n mashID -y -c bioconda python=3.10 mash=2.3 pandas=1.4.4 
 conda activate mashID
 
 # Clone repo and test mashID
@@ -37,6 +37,10 @@ optional arguments:
                         database by default.
   -v, --version         show program's version number and exit
 ```
-## Output files
+
+## Outputs
 - sample1_mashID.tsv: individual sample `mash screen` output table.
 - summary_mashID.tsv: if more than one sample, this file will hold the top identification result for each sample.
+
+## Building custom databse
+

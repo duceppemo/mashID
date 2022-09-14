@@ -44,8 +44,8 @@ class Identification(object):
         # Screen samples
         print('Identifying samples...')
         samples_df = Methods.mash_screen_parallel(self.mash_db, self.output_folder, self.sample_dict)
-        print('\nIdentification results:\n\n')
-        print(samples_df.to_string(index=False))
+        print('\nIdentification results:\n')
+        print(samples_df.to_string(index=False, justify='left'))
 
         # Write output file
         if len(self.sample_dict) > 1:

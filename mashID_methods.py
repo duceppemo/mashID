@@ -92,13 +92,8 @@ class Methods(object):
         df.index = df.index + 1  # Change Index column to starts at 1 instead of 0
         df.index.name = 'Rank'  # Change index column name
 
-        # Reformat Query-ID
-        df['Query-ID'] = list(map(
-            lambda x: '.'.join(os.path.basename(x).replace("_", ' ').split(".")[:-1]).split("strain")[0],
-            df['Query-ID'].tolist()))
-
-        # Drop last "Comment" column
-        df = df.iloc[:, :-1]
+        # Reformat Query-ID to only keep the accession number
+        df['Query-ID'] = list(map(lambda x: '.'.join(os.path.basename(x).split(".")[:-1]), df['Query-ID'].tolist()))
 
         # Write output file
         output_tsv = output_folder + '/' + sample + "_mashID.tsv"
@@ -115,13 +110,40 @@ class Methods(object):
                     for sample, seq_list in sample_dict.items())
             for sample, my_df in executor.map(lambda x: Methods.mash_screen(*x), args):
                 my_df = my_df.head(n=1)
+                # comment = my_df['Query-Comment'].iloc[0]
                 results_dict = {'Sample': sample,
                                 'Identity': my_df['Identity'],
                                 'Shared-Hashes': my_df['Shared-Hashes'],
                                 'P-Value': my_df['P-Value'],
-                                'Query-ID': my_df['Query-ID']}
+                                'Query-ID': my_df['Query-ID'],
+                                'Query-Comment': Methods.species_from_header(my_df['Query-Comment'].iloc[0])
+                                }
                 df = pd.concat([df, pd.DataFrame.from_dict(results_dict)], axis='index', ignore_index=True)
         # Sort df by sample
         df.sort_values(by=['Sample'], axis='index', ascending=True, inplace=True, ignore_index=True)
 
+        # rename Comment columen
+        df.rename(columns={'Identity': '%-Identity', 'Query-ID': 'Accession', 'Query-Comment': 'Identification'},
+                  inplace=True)
+
         return df
+
+    @staticmethod
+    def species_from_header(header):
+        if header.startswith('['):
+            header_list = header.split()[2:]
+        else:
+            header_list = header.split()
+        genus = header_list[1]
+        species = header_list[2]
+
+        if 'variant' in header:
+            variant = header_list[4]
+            new_name = '{} {} variant {}'.format(genus, species, variant)
+        elif any(x in header for x in ['subsp', 'sub']):
+            subsp = header_list[4]
+            new_name = '{} {} subsp. {}'.format(genus, species, subsp)
+        else:
+            new_name = '{} {}'.format(genus, species)
+
+        return new_name
