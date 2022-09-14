@@ -48,8 +48,9 @@ class Identification(object):
         print(samples_df.to_string(index=False))
 
         # Write output file
-        output_tsv = self.output_folder + '/summary_mashID.tsv'
-        samples_df.to_csv(output_tsv, sep="\t", index=False)
+        if len(self.sample_dict) > 1:
+            output_tsv = self.output_folder + '/summary_mashID.tsv'
+            samples_df.to_csv(output_tsv, sep="\t", index=False)
 
         # Delete tmp folder
         shutil.rmtree(tmp_folder)
@@ -58,7 +59,7 @@ class Identification(object):
 if __name__ == "__main__":
     parser = ArgumentParser(description='Species identification from NGS data using Mash.')
     parser.add_argument('-i', '--input', metavar='/input/folder/',
-                        help='Input directory with fastq files or a single fastq file, gzipped or not.',
+                        help='Input directory with fastq/fasta files or a single fastq/fasta file, gzipped or not.',
                         type=str, required=True)
     parser.add_argument('-o', '--output', metavar='/output/folder/',
                         help='Output directory',
