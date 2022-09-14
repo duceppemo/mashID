@@ -8,26 +8,35 @@ MashID works with Illumina (paired-end or single-end), Ion Torrent, Nanopore and
 
 ## Installation
 ```commandline
-git clone 
+# Create and activate virtual envrionment
+conda create -n mashID -y -c bioconda mash=2.3
+conda activate mashID
+
+# Clone repo and test mashID
+git clone https://github.com/duceppemo/mashID
+cd mashID
+python mashID.py -h
 ```
 
 ## Usage
-```commandline
+```
 usage: python mashID.py [-h] -i /input/folder/ -o /output/folder/
                  [-m /path/to/file.msh] [-v]
 
 Species identification from NGS data using Mash.
 
 optional arguments:
-  -h, --help            Show this help message and exit
+  -h, --help            show this help message and exit
   -i /input/folder/, --input /input/folder/
-                        Input directory with fastq files or a single fastq
-                        file, gzipped or not.
+                        Input directory with fastq/fasta files or a single
+                        fastq/fasta file, gzipped or not.
   -o /output/folder/, --output /output/folder/
                         Output directory
   -m /path/to/file.msh, --mash-db /path/to/file.msh
                         Mash sketch database. Will run a Mycobacteria mash
                         database by default.
-  -v, --version         Show program's version number and exit
-
+  -v, --version         show program's version number and exit
 ```
+## Output files
+- sample1_mashID.tsv: individual sample `mash screen` output table.
+- summary_mashID.tsv: if more than one sample, this file will hold the top identification result for each sample.
