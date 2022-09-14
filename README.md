@@ -2,10 +2,11 @@
 Identify organisms using Mash.
 
 ## Description
-MashID was developed to quickly identify Mycobacteria species from WGS data. Users can provide their own mash sketches database to identify other organisms.
+MashID was developed to quickly identify bacterial species from WGS data. Users can provide their own mash sketches database to identify other organisms.
 
 MashID works with Illumina (paired-end or single-end), Ion Torrent, Nanopore and PacBio data. Actually any fastq (sequencing data) or fasta (genome assemblies), gzipped or not, can be used as input.
 
+MashID comes with a pre-compiled database to identify mycobacteria species.
 ## Installation
 ```commandline
 # Create and activate virtual envrionment
@@ -42,5 +43,13 @@ optional arguments:
 - sample1_mashID.tsv: individual sample `mash screen` output table.
 - summary_mashID.tsv: if more than one sample, this file will hold the top identification result for each sample.
 
-## Building custom databse
-
+## Building custom database
+You can use the `make_mashID_db.py` script to build a suitable database for mashID.
+```commandline
+python make_mashID_db.py \
+    -i /media/data/fna_derep_0.001 \
+    -o /media/database/mycoID' \
+    -p mycobacteria_mash_sketches \
+    -t 16
+```
+Run `python make_mashID_db.py -h` for detailed help.
