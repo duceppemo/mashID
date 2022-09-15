@@ -109,14 +109,21 @@ class Methods(object):
             args = ((sample, mash_db, seq_list[0], output_folder)
                     for sample, seq_list in sample_dict.items())
             for sample, my_df in executor.map(lambda x: Methods.mash_screen(*x), args):
+                # Only keep best hit
                 my_df = my_df.head(n=1)
-                # comment = my_df['Query-Comment'].iloc[0]
+
+                try:
+                    comment = my_df['Query-Comment'].iloc[0]  # Get the ID
+                    org_id = Methods.species_from_header(comment)  # Change name
+                except IndexError:
+                    org_id = 'No hits in database'
+
                 results_dict = {'Sample': sample,
                                 'Identity': my_df['Identity'],
                                 'Shared-Hashes': my_df['Shared-Hashes'],
                                 'P-Value': my_df['P-Value'],
                                 'Query-ID': my_df['Query-ID'],
-                                'Query-Comment': Methods.species_from_header(my_df['Query-Comment'].iloc[0])
+                                'Query-Comment': org_id
                                 }
                 df = pd.concat([df, pd.DataFrame.from_dict(results_dict)], axis='index', ignore_index=True)
         # Sort df by sample
