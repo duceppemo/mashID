@@ -10,7 +10,7 @@ MashID comes with a pre-compiled database to identify mycobacteria species.
 ## Installation
 ```commandline
 # Create and activate virtual envrionment
-conda create -n mashID -y -c bioconda python=3.10 mash=2.3 pandas=1.4.4 
+conda create -n mashID -y -c bioconda python=3.10 mash=2.3 pandas=1.4.4 psutil=5.9.2 bbmap=38.99
 conda activate mashID
 
 # Clone repo and test mashID
@@ -21,21 +21,21 @@ python mashID.py -h
 
 ## Usage
 ```
-usage: python mashID.py [-h] -i /input/folder/ -o /output/folder/
-                 [-m /path/to/file.msh] [-v]
+usage: python mashID.py [-h] -i /input/folder/ -o /output/folder/ [-d /path/to/mash_databse.msh] [-t 16] [-p 2] [-m 57] [-v]
 
 Species identification from NGS data using Mash.
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   -i /input/folder/, --input /input/folder/
-                        Input directory with fastq/fasta files or a single
-                        fastq/fasta file, gzipped or not.
+                        Input directory with fastq/fasta files or a single fastq/fasta file, gzipped or not.
   -o /output/folder/, --output /output/folder/
                         Output directory
-  -m /path/to/file.msh, --mash-db /path/to/file.msh
-                        Mash sketch database. Will run a Mycobacteria mash
-                        database by default.
+  -d /path/to/mash_databse.msh, --database /path/to/mash_databse.msh
+                        Mash sketch database. Will run a Mycobacteria mash database by default.
+  -t 16, --threads 16   Number of threads. Default is maximum available(16). Optional.
+  -p 2, --parallel 2    Number of samples to process in parallel. Default is 2. Optional.
+  -m 57, --memory 57    Memory in GB. Default is 85% of total memory (57)
   -v, --version         show program's version number and exit
 ```
 

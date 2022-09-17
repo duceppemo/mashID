@@ -3,9 +3,14 @@ import os
 import pathlib
 import shutil
 from io import StringIO
+from io import TextIOWrapper
 import pandas as pd
 from concurrent import futures
+import gzip
+from itertools import groupby
 from multiprocessing import cpu_count
+from psutil import virtual_memory
+import sys
 
 
 class Methods(object):
@@ -14,6 +19,32 @@ class Methods(object):
                            '.fasta', '.fasta.gz',
                            '.fa', '.fa.gz',
                            '.fna', '.fna.gz']
+
+    @staticmethod
+    def check_cpus(requested_cpu, n_proc):
+        total_cpu = cpu_count()
+
+        if 1 > requested_cpu > total_cpu:
+            requested_cpu = total_cpu
+            sys.stderr.write("Number of threads was set to {}".format(requested_cpu))
+        if 1 > n_proc > total_cpu:
+            n_proc = total_cpu
+            sys.stderr.write("Number of samples to parallel process was set to {}".format(total_cpu))
+
+        return requested_cpu, n_proc
+
+    @staticmethod
+    def check_mem(requested_mem):
+        max_mem = int(virtual_memory().total * 0.85 / 1000000000)  # in GB
+        if requested_mem:
+            if requested_mem > max_mem:
+                requested_mem = max_mem
+                sys.stderr.write("Requested memory was set higher than available system memory ({})".format(max_mem))
+                sys.stderr.write("Memory was set to {}".format(requested_mem))
+        else:
+            requested_mem = max_mem
+
+        return requested_mem
 
     @staticmethod
     def make_folder(folder):
@@ -30,12 +61,22 @@ class Methods(object):
                 if filename.endswith(tuple(Methods.accepted_extensions)):  # accept a tuple or string
                     file_path = os.path.join(root, filename)
                     file_path = os.path.realpath(file_path)  # follow symbolic links
+
+                    # Get sample name
                     sample = filename.split('.')[0].replace('_pass', '').replace('_filtered', '')
                     if filename.endswith('.gz'):
                         sample = sample.split('.')[0]
+
+                    # Get total reads and bp for fastq/fasta
+
+                    # Create dictionary entries
                     if sample not in sample_dict:
-                        sample_dict[sample] = []
-                    sample_dict[sample].append(file_path)
+                        sample_dict[sample] = dict()
+                        sample_dict[sample]['path'] = list()
+                        sample_dict[sample]['reads'] = list()
+                        sample_dict[sample]['bp'] = list()
+
+                    sample_dict[sample]['path'].append(file_path)
         if not sample_dict:
             raise Exception('Sample dictionary empty!')
 
@@ -44,24 +85,25 @@ class Methods(object):
     @staticmethod
     def merge_fastq_pair(sample_dict, output_folder):
         # Check if multiple files per sample (if paired-end)
-        for sample, seq_list in sample_dict.items():
-            if len(seq_list) == 2:  # Paired-end
+        for sample, info_dict in sample_dict.items():
+            if len(info_dict['path']) == 2:  # Paired-end
                 # Figure out if input file is gzipped or not
-                file_ext = seq_list[0].split('.')[-1]
+                file_ext = info_dict['path'][0].split('.')[-1]
                 if file_ext == '.gz':
-                    file_ext = seq_list[0].split('.')[-2]
+                    file_ext = info_dict['path'][0].split('.')[-2]
                     merged_file = output_folder + '/' + sample + file_ext + '.gz'
                 else:
                     merged_file = output_folder + '/' + sample + file_ext
 
                 with open(merged_file, 'wb') as wfp:
-                    for seq_file in seq_list:
+                    for seq_file in info_dict['path']:
                         with open(seq_file, 'rb') as rfp:
                             shutil.copyfileobj(rfp, wfp)
             else:
                 try:
                     # just create symbolic link
-                    os.symlink(seq_list[0], output_folder + '/' + os.path.basename(seq_list[0]))
+                    os.symlink(info_dict['path'][0], output_folder +
+                               '/' + os.path.basename(info_dict['path'][0]))
                 except FileExistsError:
                     pass
 
@@ -103,33 +145,44 @@ class Methods(object):
 
     @staticmethod
     def mash_screen_parallel(mash_db, output_folder, sample_dict):
-        df = pd.DataFrame(columns=['Sample', 'Identity', 'Shared-Hashes', 'P-Value', 'Query-ID'])
+        df = pd.DataFrame(columns=['Sample', 'Reads', 'Length', 'Identity', 'Shared-Hashes',
+                                   'Median-Multiplicity', 'P-Value', 'Query-ID'])
 
         with futures.ThreadPoolExecutor(max_workers=cpu_count()) as executor:
-            args = ((sample, mash_db, seq_list[0], output_folder)
-                    for sample, seq_list in sample_dict.items())
+            args = ((sample, mash_db, info_dict['path'][0], output_folder)
+                    for sample, info_dict in sample_dict.items())
             for sample, my_df in executor.map(lambda x: Methods.mash_screen(*x), args):
                 # Only keep best hit
                 my_df = my_df.head(n=1)
 
                 try:
+                    ident = my_df['Identity'].iloc[0]
+                    hashes = my_df['Shared-Hashes'].iloc[0]
+                    mult = my_df['Median-Multiplicity'].iloc[0]
+                    p_value = my_df['P-Value'].iloc[0]
+                    query_id = my_df['Query-ID'].iloc[0]
                     comment = my_df['Query-Comment'].iloc[0]  # Get the ID
                     org_id = Methods.species_from_header(comment)  # Change name
                 except IndexError:
-                    org_id = 'No hits in database'
+                    ident = hashes = mult = p_value = query_id = 'NA'
+                    org_id = 'No significant hit in database'
 
                 results_dict = {'Sample': sample,
-                                'Identity': my_df['Identity'],
-                                'Shared-Hashes': my_df['Shared-Hashes'],
-                                'P-Value': my_df['P-Value'],
-                                'Query-ID': my_df['Query-ID'],
-                                'Query-Comment': org_id
+                                'Reads': sample_dict[sample]['reads'][0],
+                                'Length': sample_dict[sample]['bp'][0],
+                                'Identity': [ident],
+                                'Shared-Hashes': [hashes],
+                                'Median-Multiplicity': [mult],
+                                'P-Value': [p_value],
+                                'Query-ID': [query_id],
+                                'Query-Comment': [org_id]
                                 }
+                new_df = pd.DataFrame.from_dict(results_dict)
                 df = pd.concat([df, pd.DataFrame.from_dict(results_dict)], axis='index', ignore_index=True)
         # Sort df by sample
         df.sort_values(by=['Sample'], axis='index', ascending=True, inplace=True, ignore_index=True)
 
-        # rename Comment columen
+        # rename some columns
         df.rename(columns={'Identity': '%-Identity', 'Query-ID': 'Accession', 'Query-Comment': 'Identification'},
                   inplace=True)
 
@@ -154,3 +207,56 @@ class Methods(object):
             new_name = '{} {}'.format(genus, species)
 
         return new_name
+
+    @staticmethod
+    def get_read_bp(seq_file):
+        total_reads = 0
+        total_bp = 0
+        with gzip.open(seq_file, 'rb', 1024 * 1024) if seq_file.endswith('.gz') \
+                else open(seq_file, 'r', 1024 * 1024) as f:
+            if any(x in seq_file for x in ['.fq', '.fastq']):  # if fastq
+                counter = 0
+                for line in f:
+                    counter += 1
+                    if counter == 2:
+                        line = line.rstrip()
+                        total_reads += 1
+                        total_bp += len(line)
+                    if counter == 4:
+                        counter = 0
+            else:  # if fasta
+                # Need to be tested
+                # https://www.biostars.org/p/710/#120760
+                faiter = (x[1] for x in groupby(f, lambda line: line[0] == ">"))
+                total_reads = len([x for x in faiter])
+                total_bp = sum([len("".join(s.strip() for s in faiter.__next__())) for header in faiter])
+
+        return total_reads, total_bp
+
+    @staticmethod
+    def get_stats(seq_file, sample, mem, cpu):
+        cmd = ['stats.sh',
+               '-Xmx{}g'.format(mem),
+               'in={}'.format(seq_file),
+               'threads={}'.format(cpu),
+               'format=2']
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+
+        reads = 0
+        bp = 0
+        for line in TextIOWrapper(p.stdout, encoding="utf-8"):
+            line = line.strip()
+            if 'Main genome contig total' in line:
+                reads = line.split(':')[1].split('\t')[1].strip()
+            if 'Main genome contig sequence total' in line:
+                bp = line.split(':')[1].split('\t')[1].split()[0]
+        return sample, reads, bp
+
+    @staticmethod
+    def get_stats_parallel(sample_dict, mem, cpu, parallel):
+        with futures.ThreadPoolExecutor(max_workers=int(parallel)) as executor:
+            args = ((info_dict['path'][0], sample, int(mem / parallel), int(cpu / parallel))
+                    for sample, info_dict in sample_dict.items())
+            for sample, reads, bp in executor.map(lambda x: Methods.get_stats(*x), args):
+                sample_dict[sample]['reads'].append(reads)
+                sample_dict[sample]['bp'].append(bp)
