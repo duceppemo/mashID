@@ -28,6 +28,11 @@ class Identification(object):
         else:  # use the default Mycobacteria DB
             self.mash_db = pkg_resources.resource_filename('dependencies', 'mycobacteria_mash_sketches.msh')
 
+        # Filter
+        self.identity = args.identity
+        self.p_value = args.p_value
+        self.n_hits = args.n_hits
+
         # Data
         self.sample_dict = dict()
 
@@ -35,6 +40,12 @@ class Identification(object):
         self.run()
 
     def run(self):
+        # Checks
+        Methods.check_cpus(self.cpu, self.parallel)
+        Methods.check_mem(self.mem)
+        Methods.check_identity_range(self.identity)
+        Methods.check_p_value(self.p_value)
+
         # Create output folders
         Methods.make_folder(self.output_folder)
 
@@ -56,16 +67,17 @@ class Identification(object):
 
         # Screen samples and create summary report
         print('Identifying samples...')
-        samples_df = Methods.mash_screen_parallel(self.mash_db, self.output_folder, self.sample_dict)
+        samples_df = Methods.mash_screen_parallel(self.mash_db, self.output_folder, self.sample_dict,
+                                                  self.identity, self.p_value, self.cpu, self.parallel, self.n_hits)
 
         # Print summary report to terminal
         print('\nIdentification results:\n')
         print(samples_df.to_string(index=False, justify='left'))
 
         # Write output file
-        if len(self.sample_dict) > 1:
-            output_tsv = self.output_folder + '/summary_mashID.tsv'
-            samples_df.to_csv(output_tsv, sep="\t", index=False)
+        # if len(self.sample_dict) > 1:
+        output_tsv = self.output_folder + '/topID.tsv'
+        samples_df.to_csv(output_tsv, sep="\t", index=False)
 
         # Delete tmp folder (needed to merged paired-end fastq files, if present)
         shutil.rmtree(tmp_folder)
@@ -85,6 +97,15 @@ if __name__ == "__main__":
     parser.add_argument('-d', '--database', metavar='/path/to/mash_databse.msh',
                         help='Mash sketch database. Will run a Mycobacteria mash database by default.',
                         type=str, required=False)
+    parser.add_argument('--identity', metavar='0.9',
+                        help='Minimum identity to report. [0-1]. Default is 0.9',
+                        type=float, default=0.9, required=False)
+    parser.add_argument('--p-value', metavar='0.05',
+                        help='Maximum p-value to report',
+                        type=float, default=0.05, required=False)
+    parser.add_argument('-n', '--n-hits', metavar='10',
+                        help='Number of top-hits to report (sorted by % identity). Default is 10.',
+                        type=int, default=10, required=False)
     parser.add_argument('-t', '--threads', metavar=str(max_cpu),
                         required=False,
                         type=int, default=max_cpu,
