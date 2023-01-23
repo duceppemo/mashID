@@ -47,6 +47,16 @@ class Methods(object):
         return requested_mem
 
     @staticmethod
+    def check_identity_range(my_range):
+        if 0 < my_range > 1:
+            raise Exception('identity value must be between 0 and 1.')
+
+    @staticmethod
+    def check_p_value(my_p_value):
+        if 0 < my_p_value > 1:
+            raise Exception('P-value must be between 0 and 1.')
+
+    @staticmethod
     def make_folder(folder):
         # Will create parent directories if they don't exist and will not return error if already exists
         pathlib.Path(folder).mkdir(parents=True, exist_ok=True)
@@ -111,13 +121,14 @@ class Methods(object):
         return Methods.get_files(output_folder)
 
     @staticmethod
-    def mash_screen(sample, mash_db, sample_path, output_folder):
+    def mash_screen(sample, mash_db, sample_path, output_folder, identity, p_value, cpu, n_hit):
         print('\t{}'.format(sample))
 
         cmd = ["mash", "screen",
-               '-i', str(0.9),
-               '-v', str(0.05),
+               '-i', str(identity),
+               '-v', str(p_value),
                '-w',  # to reduce redundancy in output
+               '-p', str(cpu),
                mash_db,
                sample_path]
 
@@ -128,7 +139,7 @@ class Methods(object):
         df = pd.read_csv(my_stringio, sep="\t", names=['Identity', 'Shared-Hashes', 'Median-Multiplicity',
                                                        'P-Value', 'Query-ID', 'Query-Comment'])
         df = df.sort_values(by=['Identity'], kind='mergesort', ascending=False)
-        df = df.head(n=5)  # Only keep the top 5
+        df = df.head(n=n_hit)  # Only keep the top 5
 
         df = df.reset_index(drop=True)  # Renumber indexes
         df.index = df.index + 1  # Change Index column to starts at 1 instead of 0
@@ -144,13 +155,13 @@ class Methods(object):
         return sample, df
 
     @staticmethod
-    def mash_screen_parallel(mash_db, output_folder, sample_dict):
+    def mash_screen_parallel(mash_db, output_folder, sample_dict, identity, p_value, cpu, parallel, n_hit):
         df = pd.DataFrame(columns=['Sample', 'Reads', 'Length', 'Identity', 'Shared-Hashes',
                                    'Median-Multiplicity', 'P-Value', 'Query-ID'])
 
-        with futures.ThreadPoolExecutor(max_workers=cpu_count()) as executor:
-            args = ((sample, mash_db, info_dict['path'][0], output_folder)
-                    for sample, info_dict in sample_dict.items())
+        with futures.ThreadPoolExecutor(max_workers=parallel) as executor:
+            args = ((sample, mash_db, info_dict['path'][0], output_folder,
+                     identity, p_value, int(cpu / parallel), n_hit) for sample, info_dict in sample_dict.items())
             for sample, my_df in executor.map(lambda x: Methods.mash_screen(*x), args):
                 # Only keep best hit
                 my_df = my_df.head(n=1)
