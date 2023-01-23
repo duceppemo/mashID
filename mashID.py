@@ -24,7 +24,7 @@ class Identification(object):
         self.input = os.path.abspath(args.input)
         self.output_folder = os.path.abspath(args.output)
         if args.database:
-            self.mash_db = os.path.abspath(args.databse)
+            self.mash_db = os.path.abspath(args.database)
         else:  # use the default Mycobacteria DB
             self.mash_db = pkg_resources.resource_filename('dependencies', 'mycobacteria_mash_sketches.msh')
 
