@@ -104,7 +104,7 @@ if __name__ == "__main__":
                         help='Maximum p-value to report',
                         type=float, default=0.05, required=False)
     parser.add_argument('-n', '--n-hits', metavar='10',
-                        help='Number of top-hits to report (sorted by % identity). Default is 10.',
+                        help='Number of top-hits to report (sorted by %% identity). Default is 10.',
                         type=int, default=10, required=False)
     parser.add_argument('-t', '--threads', metavar=str(max_cpu),
                         required=False,
