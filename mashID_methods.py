@@ -57,36 +57,51 @@ class Methods(object):
             raise Exception('P-value must be between 0 and 1.')
 
     @staticmethod
+    def check_input(my_input):
+        if not os.path.isdir(my_input):
+            raise Exception('Please provide a folder containing fastq files as input.')
+        if not os.path.exists(my_input):
+            raise Exception('The provided input folder does not exist.')
+
+    @staticmethod
     def make_folder(folder):
         # Will create parent directories if they don't exist and will not return error if already exists
         pathlib.Path(folder).mkdir(parents=True, exist_ok=True)
 
     @staticmethod
-    def get_files(in_folder):
+    def get_files(my_input):
         sample_dict = dict()
 
-        # Look for input sequence files recursively
-        for root, directories, filenames in os.walk(in_folder):
-            for filename in filenames:
-                if filename.endswith(tuple(Methods.accepted_extensions)):  # accept a tuple or string
-                    file_path = os.path.join(root, filename)
-                    file_path = os.path.realpath(file_path)  # follow symbolic links
+        if os.path.isdir(my_input):  # Input is a folder
+            # Look for input sequence files recursively
+            for root, directories, filenames in os.walk(my_input):
+                for filename in filenames:
+                    if filename.endswith(tuple(Methods.accepted_extensions)):  # accept a tuple or string
+                        file_path = os.path.join(root, filename)
+                        file_path = os.path.realpath(file_path)  # follow symbolic links
 
-                    # Get sample name
-                    sample = filename.split('.')[0].replace('_pass', '').replace('_filtered', '')
-                    if filename.endswith('.gz'):
-                        sample = sample.split('.')[0]
+                        # Get sample name
+                        sample = filename.split('.')[0].replace('_pass', '').replace('_filtered', '')
+                        if filename.endswith('.gz'):
+                            sample = sample.split('.')[0]
 
-                    # Get total reads and bp for fastq/fasta
+                        # Get total reads and bp for fastq/fasta
 
-                    # Create dictionary entries
-                    if sample not in sample_dict:
-                        sample_dict[sample] = dict()
-                        sample_dict[sample]['path'] = list()
-                        sample_dict[sample]['reads'] = list()
-                        sample_dict[sample]['bp'] = list()
+                        # Create dictionary entries
+                        if sample not in sample_dict:
+                            sample_dict[sample] = dict()
+                            sample_dict[sample]['path'] = list()
+                            sample_dict[sample]['reads'] = list()
+                            sample_dict[sample]['bp'] = list()
 
-                    sample_dict[sample]['path'].append(file_path)
+                        sample_dict[sample]['path'].append(file_path)
+        elif os.path.isfile(my_input):  # Input is a file
+            sample = os.path.basename(my_input).split('.')[0].replace('_pass', '')
+            sample_dict[sample] = dict()
+            sample_dict[sample] = {'path': [os.path.realpath(my_input)]}  # Follow symbolic links
+        else:
+            raise Exception('Hmmm... something went terribly wrong!')
+
         if not sample_dict:
             raise Exception('Sample dictionary empty!')
 
