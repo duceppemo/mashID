@@ -21,7 +21,7 @@ python mashID.py -h
 
 ## Usage
 ```
-usage: python mashID.py [-h] -i /input/folder/ -o /output/folder/ [-d /path/to/mash_databse.msh] [-t 16] [-p 2] [-m 57] [-v]
+usage: python mashID.py [-h] -i /input/folder/ -o /output/folder/ [-d /path/to/mash_databse.msh] [--identity 0.9] [--p-value 0.05] [-n 10] [-t 16] [-p 2] [-m 57] [-v]
 
 Species identification from NGS data using Mash.
 
@@ -33,6 +33,9 @@ options:
                         Output directory
   -d /path/to/mash_databse.msh, --database /path/to/mash_databse.msh
                         Mash sketch database. Will run a Mycobacteria mash database by default.
+  --identity 0.9        Minimum identity to report. [0-1]. Default is 0.9
+  --p-value 0.05        Maximum p-value to report
+  -n 10, --n-hits 10    Number of top-hits to report (sorted by % identity). Default is 10.
   -t 16, --threads 16   Number of threads. Default is maximum available(16). Optional.
   -p 2, --parallel 2    Number of samples to process in parallel. Default is 2. Optional.
   -m 57, --memory 57    Memory in GB. Default is 85% of total memory (57)
@@ -47,9 +50,7 @@ options:
 You can use the `make_mashID_db.py` script to build a suitable database for mashID.
 ```commandline
 python make_mashID_db.py \
-    -i /media/data/fna_derep_0.001 \
+    -i /media/data/sample_folder \
     -o /media/database/mycoID' \
-    -p mycobacteria_mash_sketches \
-    -t 16
 ```
 Run `python make_mashID_db.py -h` for detailed help.

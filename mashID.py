@@ -8,7 +8,7 @@ from psutil import virtual_memory
 
 
 __author__ = 'duceppemo'
-__version__ = '0.1'
+__version__ = '0.1.1'
 
 
 class Identification(object):
@@ -21,10 +21,10 @@ class Identification(object):
         self.mem = args.memory
 
         # I/O
-        self.input = os.path.abspath(args.input)
-        self.output_folder = os.path.abspath(args.output)
+        self.input = os.path.abspath(args.input.replace("'", "").replace('"', ''))
+        self.output_folder = os.path.abspath(args.output.replace("'", "").replace('"', ''))
         if args.database:
-            self.mash_db = os.path.abspath(args.database)
+            self.mash_db = os.path.abspath(args.database.replace("'", "").replace('"', ''))
         else:  # use the default Mycobacteria DB
             self.mash_db = pkg_resources.resource_filename('dependencies', 'mycobacteria_mash_sketches.msh')
 
@@ -45,17 +45,14 @@ class Identification(object):
         Methods.check_mem(self.mem)
         Methods.check_identity_range(self.identity)
         Methods.check_p_value(self.p_value)
+        # Methods.check_input(self.input)
 
         # Create output folders
         Methods.make_folder(self.output_folder)
 
         # Get input files and place info in dictionary
         print('Getting input file(s) stats...')
-        if os.path.isdir(self.input):  # single or multiple files inside folder
-            self.sample_dict = Methods.get_files(self.input)
-        else:  # is a single file
-            sample = os.path.basename(self.input).split('.')[0].replace('_pass', '')
-            self.sample_dict = {sample: [os.path.realpath(self.input)]}  # Follow symbolic links
+        self.sample_dict = Methods.get_files(self.input)
 
         # Merge paired-end fastq files is present and update sample dict
         tmp_folder = self.output_folder + '/tmp'
