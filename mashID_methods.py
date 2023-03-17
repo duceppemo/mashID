@@ -81,14 +81,15 @@ class Methods(object):
                         file_path = os.path.realpath(file_path)  # follow symbolic links
 
                         # Get sample name
-                        sample = filename.split('.')[0].replace('_pass', '').replace('_filtered', '')
+                        # sample = filename.split('.')[0].replace('_pass', '').replace('_filtered', '')
+                        sample = filename.split('.')[0].split('_')[0]
                         if filename.endswith('.gz'):
                             sample = sample.split('.')[0]
 
                         # Get total reads and bp for fastq/fasta
 
                         # Create dictionary entries
-                        if sample not in sample_dict:
+                        if sample not in sample_dict.keys():
                             sample_dict[sample] = dict()
                             sample_dict[sample]['path'] = list()
                             sample_dict[sample]['reads'] = list()
@@ -114,11 +115,11 @@ class Methods(object):
             if len(info_dict['path']) == 2:  # Paired-end
                 # Figure out if input file is gzipped or not
                 file_ext = info_dict['path'][0].split('.')[-1]
-                if file_ext == '.gz':
+                if file_ext == 'gz':
                     file_ext = info_dict['path'][0].split('.')[-2]
-                    merged_file = output_folder + '/' + sample + file_ext + '.gz'
+                    merged_file = output_folder + '/' + sample + '.' + file_ext + '.gz'
                 else:
-                    merged_file = output_folder + '/' + sample + file_ext
+                    merged_file = output_folder + '/' + sample + '.' + file_ext
 
                 with open(merged_file, 'wb') as wfp:
                     for seq_file in info_dict['path']:

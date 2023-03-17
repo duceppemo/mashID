@@ -51,7 +51,7 @@ class Identification(object):
         Methods.make_folder(self.output_folder)
 
         # Get input files and place info in dictionary
-        print('Getting input file(s) stats...')
+        print('Gathering fastq files...')
         self.sample_dict = Methods.get_files(self.input)
 
         # Merge paired-end fastq files is present and update sample dict
@@ -60,6 +60,7 @@ class Identification(object):
         self.sample_dict = Methods.merge_fastq_pair(self.sample_dict, tmp_folder)
 
         # Get file stats (number of reads/contigs and bp)
+        print('Getting input file(s) stats...')
         Methods.get_stats_parallel(self.sample_dict, self.mem, self.cpu, self.parallel)
 
         # Screen samples and create summary report
