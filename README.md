@@ -54,3 +54,5 @@ python make_mashID_db.py \
     -o /media/database/mycoID' \
 ```
 Run `python make_mashID_db.py -h` for detailed help.
+
+- Pre-compiled databases for Refseq bacteria and proGenomes v3 can be found [here](https://figshare.com/account/home#/projects/162688)
