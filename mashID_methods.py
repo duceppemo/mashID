@@ -154,7 +154,7 @@ class Methods(object):
         # 'Identity', 'Shared-Hashes', 'Median-Multiplicity', 'P-Value', 'Query-ID', 'Query-Comment'
         df = pd.read_csv(my_stringio, sep="\t", names=['Identity', 'Shared-Hashes', 'Median-Multiplicity',
                                                        'P-Value', 'Query-ID', 'Query-Comment'])
-        df = df.sort_values(by=['Identity'], kind='mergesort', ascending=False)
+        df = df.sort_values(by=['Median-Multiplicity'], kind='mergesort', ascending=False)
         df = df.head(n=n_hit)  # Only keep the top 5
 
         df = df.reset_index(drop=True)  # Renumber indexes
