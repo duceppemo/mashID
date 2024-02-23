@@ -104,6 +104,11 @@ if __name__ == "__main__":
     parser.add_argument('-n', '--n-hits', metavar='10',
                         help='Number of top-hits to report (sorted by %% identity). Default is 10.',
                         type=int, default=10, required=False)
+    parser.add_argument('-s', '--sort-by', choices=['similaritu', 'multiplicity'],
+                        default='similarity',
+                        required=False,
+                        type=str,
+                        help='How to sort the result tables. Will impact the "Top hit" table. Default is "similarity". Optional.')
     parser.add_argument('-t', '--threads', metavar=str(max_cpu),
                         required=False,
                         type=int, default=max_cpu,
