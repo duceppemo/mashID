@@ -137,7 +137,7 @@ class Methods(object):
         return Methods.get_files(output_folder)
 
     @staticmethod
-    def mash_screen(sample, mash_db, sample_path, output_folder, identity, p_value, cpu, n_hit):
+    def mash_screen(sample, mash_db, sample_path, output_folder, identity, p_value, cpu, n_hit, sortby):
         print('\t{}'.format(sample))
 
         cmd = ["mash", "screen",
@@ -154,7 +154,10 @@ class Methods(object):
         # 'Identity', 'Shared-Hashes', 'Median-Multiplicity', 'P-Value', 'Query-ID', 'Query-Comment'
         df = pd.read_csv(my_stringio, sep="\t", names=['Identity', 'Shared-Hashes', 'Median-Multiplicity',
                                                        'P-Value', 'Query-ID', 'Query-Comment'])
-        df = df.sort_values(by=['Median-Multiplicity'], kind='mergesort', ascending=False)
+        if sortby == 'multiplicity':
+            df = df.sort_values(by=['Median-Multiplicity'], kind='mergesort', ascending=False)
+        else:  # elif sortby == 'identity'
+            df = df.sort_values(by=['Identity'], kind='mergesort', ascending=False)
         df = df.head(n=n_hit)  # Only keep the top 5
 
         df = df.reset_index(drop=True)  # Renumber indexes
@@ -171,13 +174,13 @@ class Methods(object):
         return sample, df
 
     @staticmethod
-    def mash_screen_parallel(mash_db, output_folder, sample_dict, identity, p_value, cpu, parallel, n_hit):
+    def mash_screen_parallel(mash_db, output_folder, sample_dict, identity, p_value, cpu, parallel, n_hit, sortby):
         df = pd.DataFrame(columns=['Sample', 'Reads', 'Length', 'Identity', 'Shared-Hashes',
                                    'Median-Multiplicity', 'P-Value', 'Query-ID'])
 
         with futures.ThreadPoolExecutor(max_workers=parallel) as executor:
             args = ((sample, mash_db, info_dict['path'][0], output_folder,
-                     identity, p_value, int(cpu / parallel), n_hit) for sample, info_dict in sample_dict.items())
+                     identity, p_value, int(cpu / parallel), n_hit, sortby) for sample, info_dict in sample_dict.items())
             for sample, my_df in executor.map(lambda x: Methods.mash_screen(*x), args):
                 # Only keep best hit
                 my_df = my_df.head(n=1)
