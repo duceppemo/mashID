@@ -26,7 +26,7 @@ class Identification(object):
         if args.database:
             self.mash_db = os.path.abspath(args.database.replace("'", "").replace('"', ''))
         else:  # use the default Mycobacteria DB
-            self.mash_db = pkg_resources.resource_filename('dependencies', 'mycobacteria_mash_sketches.msh')
+            self.mash_db = pkg_resources.resource_filename('dependencies', 'mycobacteria_2024-02-23.msh')
 
         # Filter
         self.identity = args.identity
