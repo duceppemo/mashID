@@ -1,12 +1,13 @@
 # mashID
-Identify organisms using Mash.
+Identify organisms from genome assemblies (fasta) and long or short raw reads (fastq).
 
 ## Description
 MashID was developed to quickly identify bacterial species from WGS data. Users can provide their own mash sketches database to identify other organisms.
 
 MashID works with Illumina (paired-end or single-end), Ion Torrent, Nanopore and PacBio data. Actually any fastq (sequencing data) or fasta (genome assemblies), gzipped or not, can be used as input.
 
-MashID comes with a pre-compiled database to identify mycobacteria species.
+MashID comes with a pre-compiled database to identify *Mycobacteria* species. Note that this database doesn't perform well with *Mycobacterium tuberculosis* variant bovis. Please use the new database in Figshare (link at bottom) for this identifying *Mycobacteria*.
+
 ## Installation
 ```commandline
 # Create and activate virtual envrionment
@@ -21,7 +22,8 @@ python mashID.py -h
 
 ## Usage
 ```
-usage: python mashID.py [-h] -i /input/folder/ -o /output/folder/ [-d /path/to/mash_databse.msh] [--identity 0.9] [--p-value 0.05] [-n 10] [-t 16] [-p 2] [-m 57] [-v]
+usage: python mashID.py [-h] -i /input/folder/ -o /output/folder/ [-d /path/to/mash_databse.msh] [--identity 0.9] [--p-value 0.05] [-n 10]
+                        [-s {identity,multiplicity}] [-t 64] [-p 2] [-m 459] [-v]
 
 Species identification from NGS data using Mash.
 
@@ -36,9 +38,11 @@ options:
   --identity 0.9        Minimum identity to report. [0-1]. Default is 0.9
   --p-value 0.05        Maximum p-value to report
   -n 10, --n-hits 10    Number of top-hits to report (sorted by % identity). Default is 10.
-  -t 16, --threads 16   Number of threads. Default is maximum available(16). Optional.
+  -s {identity,multiplicity}, --sort-by {identity,multiplicity}
+                        How to sort the result tables. Will impact the "Top hit" table. Default is "similarity". Optional.
+  -t 64, --threads 64   Number of threads. Default is maximum available(64). Optional.
   -p 2, --parallel 2    Number of samples to process in parallel. Default is 2. Optional.
-  -m 57, --memory 57    Memory in GB. Default is 85% of total memory (57)
+  -m 459, --memory 459  Memory in GB. Default is 85% of total memory (459)
   -v, --version         show program's version number and exit
 ```
 
@@ -55,4 +59,4 @@ python make_mashID_db.py \
 ```
 Run `python make_mashID_db.py -h` for detailed help.
 
-- Pre-compiled databases for Refseq bacteria and proGenomes v3 can be found [here](https://figshare.com/account/home#/projects/162688)
+- Pre-compiled databases for Refseq bacteria and proGenomes v3, Listeria spp. and Mycobacteria spp. can be found [here](https://figshare.com/account/home#/projects/162688)
