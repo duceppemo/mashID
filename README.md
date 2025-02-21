@@ -1,4 +1,4 @@
-# mashID
+6# mashID
 Identify organisms from genome assemblies (fasta) and long or short raw reads (fastq).
 
 ## Description
@@ -58,5 +58,7 @@ python make_mashID_db.py \
     -o /media/database/mycoID' \
 ```
 Run `python make_mashID_db.py -h` for detailed help.
+
+- The bash script `mashID_Mycobactriaceae_DB.sh` is an example on how to dowload an prep the data to build a custom database using NCBI datasets.
 
 - Pre-compiled databases for Refseq bacteria and proGenomes v3, Listeria spp. and Mycobacteria spp. can be found [here](https://figshare.com/account/home#/projects/162688)
