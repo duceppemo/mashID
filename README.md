@@ -59,6 +59,6 @@ python make_mashID_db.py \
 ```
 Run `python make_mashID_db.py -h` for detailed help.
 
-- The bash script `mashID_Mycobactriaceae_DB.sh` is an example on how to dowload an prep the data to build a custom database using NCBI datasets.
+- The bash script `mashID_Mycobactriaceae_DB.sh` is an example on how to download an prep the data to build a custom database using NCBI datasets.
 
-- Pre-compiled databases for Refseq bacteria and proGenomes v3, Listeria spp. and Mycobacteria spp. can be found [here](https://figshare.com/account/home#/projects/162688)
+- Pre-compiled databases for Refseq bacteria and proGenomes v3, Listeria spp. and Mycobacteria spp. can be found [here](https://figshare.com/articles/dataset/Mycobacteriaceae_database_for_mashID_-_2025-02-20_update/28489304?file=52609139)
