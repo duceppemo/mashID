@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.3 (2026-09-22)
+
+### Changed
+- The example ships and compares its MultiQC table; the Example wiki page lists every file produced.
+- Workflow diagram redrawn vertically with larger text, in the README and on the wiki Home page.
+
 ## 0.2.2 (2026-09-22)
 
 ### Changed
