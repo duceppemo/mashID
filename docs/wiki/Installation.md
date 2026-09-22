@@ -32,6 +32,19 @@ Running from the source tree without installing also works: `python mashID.py -h
 A recipe is [submitted to bioconda](https://github.com/bioconda/bioconda-recipes/pull/69474). Once
 merged, `conda install -c conda-forge -c bioconda mashid` installs everything, Mash included.
 
+## Verify the installation
+
+The repository ships a small synthetic [example](https://github.com/duceppemo/mashID/tree/master/example)
+with its own database and expected results, so nothing needs to be downloaded:
+
+```bash
+git clone https://github.com/duceppemo/mashID && cd mashID   # if not already cloned
+bash example/run_example.sh
+```
+
+It screens four samples (paired-end reads, a mixed culture, an assembly, and an unrelated sequence)
+and reports `OK` when the summary matches `example/expected/summary_mashID.tsv`.
+
 ## Databases
 
 No database is bundled. Download the default one (27 MB) after installing:

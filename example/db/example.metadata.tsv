@@ -1,0 +1,4 @@
+Accession	Organism	TaxID	Length	Hashes	Source_File	Description
+GCF_000000001.1	Exemplaria alpha	NA	120000	1000	GCF_000000001.1.fna	NZ_EXAMPL01000001.1 Exemplaria alpha strain EX-1 chromosome, complete genome
+GCF_000000002.1	Exemplaria beta subsp. gamma	NA	120000	1000	GCF_000000002.1.fna	NZ_EXAMPL02000001.1 Exemplaria beta subsp. gamma strain EX-2 chromosome, complete genome
+GCF_000000003.1	Fictivibrio delta	NA	120000	1000	GCF_000000003.1.fna	NZ_EXAMPL03000001.1 Fictivibrio delta strain EX-3 chromosome, complete genome

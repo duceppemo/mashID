@@ -45,6 +45,12 @@ MBWGS440  2741728    625918949  0.999713  994/1000       122                  0 
 
 Results are written to `summary_mashID.tsv` (one line per sample) and `<sample>_mashID.tsv` (top hits).
 
+To check an installation without downloading anything, run the bundled [example](example/):
+
+```bash
+bash example/run_example.sh
+```
+
 ## Documentation
 
 Everything else lives in the [wiki](https://github.com/duceppemo/mashID/wiki), whose sources are

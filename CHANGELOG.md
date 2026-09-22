@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- `example/`: a self-contained synthetic dataset (three fictional genomes, paired-end reads, a mixed
+  culture, an assembly, an unrelated sequence) with expected results and `run_example.sh` to verify
+  an installation offline. Checked in CI.
+- Minimal README with logo and badges; documentation moved to the wiki, whose sources live in
+  `docs/wiki/` and are published by a workflow. Release workflow, citation file, contributing guide,
+  code of conduct, security policy, issue and pull request templates, dependabot, pre-commit.
+
 ## 0.2.0 (2026-09-21)
 
 ### Breaking changes

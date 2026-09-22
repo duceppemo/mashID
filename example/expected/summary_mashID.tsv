@@ -1,0 +1,5 @@
+Sample	Sequences	Bases	Identity	Shared_Hashes	Median_Multiplicity	P_Value	Accession	TaxID	Identification	Note
+alpha	8000	1200000	0.999952	999/1000	8	0	GCF_000000001.1	NA	Exemplaria alpha	
+delta_assembly	2	120000	0.999952	999/1000	1	0	GCF_000000003.1	NA	Fictivibrio delta	
+mixed_beta_delta	11000	1650000	0.999857	997/1000	6	0	GCF_000000002.1	NA	Exemplaria beta subsp. gamma	Possible mixture with: Fictivibrio delta
+unknown	1	30000	NA	NA	NA	NA	NA	NA	No significant hit in database	
