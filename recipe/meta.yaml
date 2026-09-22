@@ -1,7 +1,7 @@
-# Bioconda recipe template. To publish:
-#   1. Tag a release (git tag v0.2.0 && git push --tags) so the GitHub tarball exists.
-#   2. Fill in sha256: curl -sL <url> | sha256sum
-#   3. Copy this folder to bioconda-recipes/recipes/mashid and open a pull request.
+# Bioconda recipe. The sha256 is that of the GitHub tarball for tag v{{ version }}
+# (curl -sL <url> | sha256sum). To publish, copy this folder to
+# bioconda-recipes/recipes/mashid and open a pull request. For a new release: tag it,
+# bump `version`, recompute the sha256 and reset `number` to 0.
 {% set name = "mashid" %}
 {% set version = "0.2.0" %}
 
@@ -11,7 +11,7 @@ package:
 
 source:
   url: https://github.com/duceppemo/mashID/archive/refs/tags/v{{ version }}.tar.gz
-  sha256: 0000000000000000000000000000000000000000000000000000000000000000
+  sha256: 4dfb98cab701832b050eb4848b863603c95de58172a344c61c1bdb344274c128
 
 build:
   number: 0
