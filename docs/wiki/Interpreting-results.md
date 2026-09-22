@@ -92,7 +92,7 @@ Identity  Shared_Hashes  Identification            Note
 
 Identity between 0.90 and 0.97 with a small fraction of shared hashes means the sample is related to
 the top hit but is not it: a species absent from the database, or a database for the wrong group.
-Screen against a broad database (`refseq_bacteria` or `progenomes3`) to find the genus, then a
+Screen against a broad database (`progenomes4` or `refseq_bacteria`) to find the genus, then a
 dedicated one if it exists. Below 0.90 nothing is reported at all:
 
 ```

@@ -43,7 +43,7 @@ Expected. Mash cannot separate members of the *M. tuberculosis* complex; report 
 SNP-based method for the variant.
 
 **`No significant hit in database` for a sample I know is bacterial.**
-The organism is not in the database (try `refseq_bacteria` or `progenomes3`), the reads are mostly
+The organism is not in the database (try `progenomes4` or `refseq_bacteria`), the reads are mostly
 something else (host, adapters), or the file is empty or truncated. `--identity 0.8` shows weaker hits.
 
 **`Sequences` and `Bases` are `NA`.**

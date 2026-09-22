@@ -87,6 +87,20 @@ REGISTRY: dict[str, RemoteDatabase] = {
             doi="10.6084/m9.figshare.28489262.v1",
         ),
         RemoteDatabase(
+            name="progenomes4",
+            filename="progenomes4_2026-09-22.msh",
+            url="https://ndownloader.figshare.com/files/69242068",
+            md5="daa010ff78267f365aef8d9a05eb9b02",
+            size=536_227_432,
+            description="proGenomes 4 representative genomes: 32,887 species-cluster representatives across "
+                        "4384 genera of bacteria and archaea, current NCBI names and TaxIDs. k=21, s=2000. "
+                        "For species-level screening of anything.",
+            doi="10.6084/m9.figshare.33968806.v1",
+            metadata_url="https://ndownloader.figshare.com/files/69242065",
+            metadata_md5="34dd58c71e6f0fcf0f939a29fb780785",
+            metadata_size=8_104_932,
+        ),
+        RemoteDatabase(
             name="progenomes3",
             filename="progenomes3.msh",
             url="https://ndownloader.figshare.com/files/39690601",
