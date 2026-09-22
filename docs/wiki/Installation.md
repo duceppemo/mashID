@@ -7,7 +7,7 @@ Requirements: Python ≥ 3.10 and Mash 2.3. mashID has no Python dependencies.
 ```bash
 conda create -n mashID -c conda-forge -c bioconda python=3.12 mash=2.3 python-isal
 conda activate mashID
-pip install https://github.com/duceppemo/mashID/archive/refs/tags/v0.2.1.tar.gz
+pip install https://github.com/duceppemo/mashID/archive/refs/tags/v0.2.2.tar.gz
 mashID -h
 ```
 

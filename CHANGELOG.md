@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.2 (2026-09-22)
 
 ### Changed
 - The default `mycobacteriaceae` database is the 2026-09-22 rebuild (3534 references, s=10000, NCBI
