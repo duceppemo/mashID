@@ -17,7 +17,7 @@ usage: mashID [-h] -i PATH -o DIR [-d FILE.msh|NAME] [--db-metadata FILE.tsv]
 | `-i, --input PATH` | Input directory (searched recursively) with fastq/fasta files, or a single file, gzipped or not. Paired-end files (R1/R2) are screened together. |
 | `--sample-sheet FILE.tsv` | Instead of `-i`: a TSV/CSV with columns `sample` and `file` (one row per file, or files separated by `;`). Relative paths are resolved from the sheet's directory. Other columns are copied into the summary. See below. |
 | `-o, --output DIR` | Output directory, created if needed. |
-| `-d, --database FILE.msh\|NAME` | Mash sketch database: a `.msh` file, or the name of a downloaded pre-built database (`mycobacteriaceae`, `mycobacteriaceae-2025`, `listeria`, `listeria-2025`, `progenomes4`, `progenomes3`, `refseq_bacteria`). Default: `mycobacteriaceae`. |
+| `-d, --database FILE.msh\|NAME` | Mash sketch database: a `.msh` file, or the name of a downloaded pre-built database (`mycobacteriaceae`, `mycobacteriaceae-2025`, `listeria`, `listeria-2025`, `salmonella`, `progenomes4`, `progenomes3`, `refseq_bacteria`). Default: `mycobacteriaceae`. |
 | `--db-metadata FILE.tsv` | Table mapping reference accessions to organism names and TaxIDs. Default: the `<database>.metadata.tsv` sidecar. |
 
 ### screening

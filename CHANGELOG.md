@@ -7,6 +7,8 @@
   NCBI taxon.
 
 ### Added
+- `salmonella` database: 1442 *Salmonella* references from RefSeq covering all subspecies, s=10000,
+  NCBI TaxIDs, [Figshare](https://doi.org/10.6084/m9.figshare.33968917), with metadata sidecar.
 - `progenomes4` database: proGenomes 4 representatives (32,887 genomes, s=2000, NCBI names and
   TaxIDs, [Figshare](https://doi.org/10.6084/m9.figshare.33968806)) with its metadata sidecar;
   `scripts/build_progenomes_db.sh` and `scripts/split_multifasta_by_genome.py` build it.

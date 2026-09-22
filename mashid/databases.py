@@ -87,6 +87,21 @@ REGISTRY: dict[str, RemoteDatabase] = {
             doi="10.6084/m9.figshare.28489262.v1",
         ),
         RemoteDatabase(
+            name="salmonella",
+            filename="salmonella_2026-09-22.msh",
+            url="https://ndownloader.figshare.com/files/69243427",
+            md5="96fa827bad8e68a92713ead5019a3783",
+            size=115_862_040,
+            description="Salmonella (NCBI taxon 590): 21,133 RefSeq assemblies as of 2026-09-22, binned by "
+                        "subspecies, dereplicated to 1442 references covering S. bongori and all six S. enterica "
+                        "subspecies, with NCBI TaxIDs. k=21, s=10000. Species/subspecies level; serovars in names "
+                        "are those of the nearest reference, not a serotype call.",
+            doi="10.6084/m9.figshare.33968917.v1",
+            metadata_url="https://ndownloader.figshare.com/files/69243424",
+            metadata_md5="dae3aa4d47280cb7dbc7a7ca9b6ca81f",
+            metadata_size=433_228,
+        ),
+        RemoteDatabase(
             name="progenomes4",
             filename="progenomes4_2026-09-22.msh",
             url="https://ndownloader.figshare.com/files/69242068",
