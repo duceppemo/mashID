@@ -1,0 +1,32 @@
+name: Bug report
+description: Something did not work as documented
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you run, what did you expect, what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command and output
+      description: The exact command, and the log (add `--debug`). Paste as text, not a screenshot.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versions
+      description: Output of `mashID --version` and `mash --version`, plus your OS.
+      placeholder: mashID 0.2.0, mash 2.3, Ubuntu 24.04
+    validations:
+      required: true
+  - type: input
+    id: database
+    attributes:
+      label: Database
+      description: Which database (`-d`), and how it was built or downloaded.

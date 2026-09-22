@@ -20,7 +20,7 @@ classifiers = [
 
 [project.optional-dependencies]
 fast = ["isal>=1.0"]      # faster gzip decompression when counting reads
-test = ["pytest>=7", "ruff"]
+test = ["pytest>=7", "ruff", "pre-commit"]
 
 [project.urls]
 Homepage = "https://github.com/duceppemo/mashID"
