@@ -6,6 +6,10 @@
 #         ASSEMBLY_SOURCE  GenBank (default) or RefSeq. Use RefSeq for heavily sequenced taxa
 #                          (e.g. Listeria: 79,000 GenBank vs 7,500 RefSeq assemblies), since
 #                          dereplication cost grows with the square of the largest species bin
+#         BIN_RANK         species (default), subspecies or serovar: how genomes are grouped before
+#                          dereplication (scripts/bin_by_species.py --rank)
+#         MAX_BIN          cap per bin, best assembly levels kept first (default 0 = no cap); use for
+#                          taxa with tens of thousands of assemblies per species
 #         THREADS          default: all CPUs
 #         DEREP_DISTANCE   Mash distance below which assemblies of a species are collapsed (default 0.001)
 #         SKETCH_SIZE      default 10000
@@ -26,6 +30,8 @@ taxid="${2:-1762}"
 name="${3:-mycobacteriaceae_$(date +%F)}"
 threads="${THREADS:-$(nproc)}"
 source="${ASSEMBLY_SOURCE:-GenBank}"
+bin_rank="${BIN_RANK:-species}"
+max_bin="${MAX_BIN:-0}"
 derep_distance="${DEREP_DISTANCE:-0.001}"
 sketch_size="${SKETCH_SIZE:-10000}"
 derep="${DEREPLICATOR:-$HOME/prog/Assembly-dereplicator/dereplicator.py}"
@@ -55,7 +61,7 @@ log "   $(find ncbi/ncbi_dataset/data -name '*.fna.gz' | wc -l) genome files"
 
 if [[ ! -f binned/bins.tsv ]]; then
     log "2. Binning by species"
-    python3 "$here/bin_by_species.py" "$report" ncbi/ncbi_dataset/data binned
+    python3 "$here/bin_by_species.py" --rank "$bin_rank" --max-bin "$max_bin" "$report" ncbi/ncbi_dataset/data binned
 fi
 
 log "3. Dereplicating each species at Mash distance $derep_distance"
