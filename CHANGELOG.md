@@ -6,6 +6,11 @@
 - Symbolic links to missing files in the input are reported up front with their targets, instead of a
   raw Mash error after read counting.
 
+### Changed
+- The `listeria` database is the 2026-09-22 rebuild from RefSeq (1441 references, s=10000, NCBI TaxIDs,
+  [Figshare](https://doi.org/10.6084/m9.figshare.33968620)) with its metadata sidecar. The 2025 one
+  remains available as `listeria-2025`.
+
 ### Added
 - `ASSEMBLY_SOURCE` option (GenBank or RefSeq) in the database build script.
 

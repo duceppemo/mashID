@@ -64,11 +64,26 @@ REGISTRY: dict[str, RemoteDatabase] = {
         ),
         RemoteDatabase(
             name="listeria",
+            filename="listeria_2026-09-22.msh",
+            url="https://ndownloader.figshare.com/files/69241489",
+            md5="4d0f8f53d71dbcea526508f1b246ab2f",
+            size=115_771_056,
+            description="Listeria (NCBI taxon 1637): 7453 RefSeq assemblies as of 2026-09-22, dereplicated per "
+                        "species at 99.9% identity to 1441 references (42 species/subspecies), with NCBI TaxIDs. "
+                        "k=21, s=10000.",
+            doi="10.6084/m9.figshare.33968620.v1",
+            metadata_url="https://ndownloader.figshare.com/files/69241486",
+            metadata_md5="ea50b80cf146e2027375c08e3ccdc94d",
+            metadata_size=404_165,
+        ),
+        RemoteDatabase(
+            name="listeria-2025",
             filename="listeria_2025-02-18.msh",
             url="https://ndownloader.figshare.com/files/52609082",
             md5="b62a2751898f63a7d3bc1091e8583a03",
             size=48_549_192,
-            description="Listeria spp., all NCBI genomes as of 2025-02-18, dereplicated.",
+            description="Previous Listeria database (2025-02-18), no TaxIDs. Kept for reproducibility; prefer "
+                        "'listeria'.",
             doi="10.6084/m9.figshare.28489262.v1",
         ),
         RemoteDatabase(
