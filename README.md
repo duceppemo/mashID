@@ -16,8 +16,8 @@ demand with `mashID_download_db`, and any Mash sketch database built with `make_
 Requirements: Python ≥ 3.10 and Mash 2.3. No Python dependencies.
 
 ```bash
-# 1. Environment with Mash (bioconda's mash 2.3 needs GSL 2.7.0: newer GSL builds break it)
-conda create -n mashID -c conda-forge -c bioconda python=3.12 mash=2.3 "gsl==2.7" python-isal
+# 1. Environment with Mash
+conda create -n mashID -c conda-forge -c bioconda python=3.12 mash=2.3 python-isal
 conda activate mashID
 
 # 2. Install mashID
@@ -33,6 +33,10 @@ mashID -h
 
 `python-isal` is optional and only speeds up gzip decompression when counting reads. You can also
 create the environment from the repository's `environment.yml`.
+
+If `mash` fails with `libgsl.so.25: cannot open shared object file`, the solver picked an older
+bioconda build of Mash 2.3 that was linked against GSL 2.6/2.7. Request the current build instead:
+`conda install -c bioconda "mash=2.3=*_11"` (or newer), which links against GSL 2.8.
 
 Running from the source tree without installing still works: `python mashID.py -h`.
 

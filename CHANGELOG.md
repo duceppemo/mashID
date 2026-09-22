@@ -60,7 +60,7 @@
   `mashID` uses it (or `--db-metadata`) instead of parsing headers.
 - `mashID_download_db` and a registry of the Figshare databases with sizes and checksums.
 - `--no-winner-take-all`, `--skip-stats`, `--debug` options.
-- Test suite (`pytest`), `ruff` lint, GitHub Actions CI, bioconda recipe template, `pyproject.toml`,
+- Test suite (`pytest`), `ruff` lint, GitHub Actions CI, bioconda recipe, `pyproject.toml`,
   `environment.yml`, `.gitignore`.
 
 ## 0.1.1
