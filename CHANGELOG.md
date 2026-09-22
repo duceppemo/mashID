@@ -13,6 +13,7 @@
   TaxIDs, [Figshare](https://doi.org/10.6084/m9.figshare.33968806)) with its metadata sidecar;
   `scripts/build_progenomes_db.sh` and `scripts/split_multifasta_by_genome.py` build it.
 - Build helpers: bin by subspecies or serovar, cap bin size preferring complete assemblies;
+  `build_taxon_db.sh` takes a comma-separated taxon list and `EXCLUDE_SP=1` drops unnamed species;
   assembly reports in `datasets summary` (snake_case) form are accepted.
 
 ## 0.2.5 (2026-09-22)
