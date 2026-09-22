@@ -36,7 +36,7 @@ headers, and `tests/test_example.py` keeps the shipped example's results exact.
 
 ## Releasing
 
-1. Update the version in `mashid/__init__.py`, `pyproject.toml` and `CITATION.cff` (a test checks they agree) and add a section to `CHANGELOG.md`.
+1. Update the version in `mashid/__init__.py`, `pyproject.toml` and `CITATION.cff` (a test checks they agree) and add a section to `CHANGELOG.md`. Run `pytest` and check its exit status before tagging.
 2. Commit, then tag: `git tag -a vX.Y.Z -m "mashID X.Y.Z" && git push origin master vX.Y.Z`.
 3. `.github/workflows/release.yml` builds the wheel and creates the GitHub release with the
    changelog section as notes. Zenodo archives the release automatically and mints a version DOI

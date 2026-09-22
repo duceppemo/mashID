@@ -238,8 +238,8 @@ def write_multiqc(path: Path, rows: list[dict[str, str]]) -> None:
     header = [
         "# id: mashid",
         "# section_name: mashID",
-        f"# description: Species identification with Mash (mashID {__version__}). "
-        "Identity is the Mash containment estimate of the best reference; Est_Depth is bases / reference length.",
+        "# description: Species identification with Mash (mashID). Identity is the Mash containment "
+        "estimate of the best reference; Est_Depth is bases / reference length.",
         "# plot_type: table",
         "# pconfig:",
         "#     id: mashid_table",

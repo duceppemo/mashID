@@ -1,6 +1,6 @@
 # id: mashid
 # section_name: mashID
-# description: Species identification with Mash (mashID 0.2.2). Identity is the Mash containment estimate of the best reference; Est_Depth is bases / reference length.
+# description: Species identification with Mash (mashID). Identity is the Mash containment estimate of the best reference; Est_Depth is bases / reference length.
 # plot_type: table
 # pconfig:
 #     id: mashid_table
