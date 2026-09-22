@@ -25,7 +25,7 @@ identity, depth and p-value, and flags mixtures, ambiguous calls and low coverag
 or fastq files, gzipped or not, from Illumina, Ion Torrent, Nanopore or PacBio. Paired-end files are
 screened together.
 
-<p align="center"><img src="docs/images/workflow.svg" alt="mashID workflow" width="720"></p>
+<p align="center"><img src="docs/images/workflow_v2.svg" alt="mashID workflow" width="720"></p>
 
 ## Quick start
 
