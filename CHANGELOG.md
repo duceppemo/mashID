@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+- `scripts/build_mycobacteriaceae_db.sh` is now `scripts/build_taxon_db.sh`: it builds a database for any
+  NCBI taxon.
+
 ### Added
 - `progenomes4` database: proGenomes 4 representatives (32,887 genomes, s=2000, NCBI names and
   TaxIDs, [Figshare](https://doi.org/10.6084/m9.figshare.33968806)) with its metadata sidecar;
@@ -51,7 +55,7 @@
 - `--fail-on {no-hit,note}` exit code 2 for pipeline gating.
 - `make_mashID_db --check`: database quality report (short references, unparsed names, missing TaxIDs,
   genus synonyms).
-- `scripts/build_mycobacteriaceae_db.sh` rewritten around NCBI `datasets` dehydrated downloads and
+- `scripts/build_taxon_db.sh` rewritten around NCBI `datasets` dehydrated downloads and
   `scripts/bin_by_species.py`; TaxIDs from the assembly report.
 - Header-parser regression corpus of 3309 real NCBI headers; macOS job in CI.
 - Wiki pages: Interpreting results, Pipelines, FAQ, Comparison; database provenance and known issues.
@@ -110,7 +114,7 @@
 
 ### Security
 - The NCBI API key that was hard-coded in `mashID_Mycobactriaceae_DB.sh` has been removed; the
-  rewritten `scripts/build_mycobacteriaceae_db.sh` reads `NCBI_API_KEY` from the environment.
+  rewritten `scripts/build_taxon_db.sh` reads `NCBI_API_KEY` from the environment.
   The old key remains in git history and must be regenerated at NCBI.
 
 ### Added

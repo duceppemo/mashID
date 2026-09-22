@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
-# Build a mashID database for an NCBI taxon (default: Mycobacteriaceae, taxid 1762).
+# Build a mashID database for any NCBI taxon from its GenBank or RefSeq assemblies
+# (default taxon: Mycobacteriaceae, taxid 1762).
 #
-# Usage:  build_mycobacteriaceae_db.sh <work_dir> [taxid] [db_name]
+# Usage:  build_taxon_db.sh <work_dir> [taxid] [db_name]
+# Examples:
+#   build_taxon_db.sh /db/myco 1762 mycobacteriaceae_2026-09-22
+#   ASSEMBLY_SOURCE=RefSeq build_taxon_db.sh /db/listeria 1637 listeria_2026-09-22
+#   ASSEMBLY_SOURCE=RefSeq BIN_RANK=subspecies MAX_BIN=3000 build_taxon_db.sh /db/salmonella 590 salmonella_2026-09-22
 # Env:    NCBI_API_KEY     optional, raises NCBI rate limits (never hard-code it)
 #         ASSEMBLY_SOURCE  GenBank (default) or RefSeq. Use RefSeq for heavily sequenced taxa
 #                          (e.g. Listeria: 79,000 GenBank vs 7,500 RefSeq assemblies), since
