@@ -22,8 +22,10 @@ jobs:
       - name: Check the tag matches the package version
         run: |
           pkg=$(python -c "import mashid; print(mashid.__version__)")
+          proj=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
           tag="${GITHUB_REF_NAME#v}"
           test "$pkg" = "$tag" || { echo "::error::tag $tag != __version__ $pkg"; exit 1; }
+          test "$proj" = "$tag" || { echo "::error::tag $tag != pyproject version $proj"; exit 1; }
       - name: Extract release notes from CHANGELOG.md
         run: |
           python - <<'PY' > notes.md

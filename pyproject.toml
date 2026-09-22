@@ -4,7 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mashID"
-dynamic = ["version"]
+# Static on purpose: a dynamic `attr = "mashid.__version__"` makes setuptools look for `mashid.py`, which on
+# case-insensitive filesystems (macOS) resolves to the legacy `mashID.py` wrapper. tests/test_version.py
+# keeps this in sync with mashid.__version__.
+version = "0.2.1"
 description = "Identify organisms from genome assemblies (fasta) or raw reads (fastq) using Mash."
 readme = "README.md"
 license = { text = "MIT" }
@@ -32,9 +35,6 @@ mashID_download_db = "mashid.download_cli:main"
 
 [tool.setuptools]
 packages = ["mashid"]
-
-[tool.setuptools.dynamic]
-version = { attr = "mashid.__version__" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
