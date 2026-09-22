@@ -23,7 +23,7 @@ Ion Torrent, Nanopore and PacBio reads, and with assemblies; inputs may be gzipp
 ```bash
 conda create -n mashID -c conda-forge -c bioconda python=3.12 mash=2.3 python-isal
 conda activate mashID
-pip install https://github.com/duceppemo/mashID/archive/refs/tags/v0.2.0.tar.gz
+pip install https://github.com/duceppemo/mashID/archive/refs/tags/v0.2.1.tar.gz
 mashID_download_db mycobacteriaceae
 mashID -i /path/to/reads -o results
 ```

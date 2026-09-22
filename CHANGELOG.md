@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.1 (2026-09-22)
 
 ### Added
 - `example/`: a self-contained synthetic dataset (three fictional genomes, paired-end reads, a mixed
