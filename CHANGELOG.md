@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.5 (2026-09-22)
 
 ### Fixed
 - Symbolic links to missing files in the input are reported up front with their targets, instead of a
