@@ -3,6 +3,9 @@
 #
 # Usage:  build_mycobacteriaceae_db.sh <work_dir> [taxid] [db_name]
 # Env:    NCBI_API_KEY     optional, raises NCBI rate limits (never hard-code it)
+#         ASSEMBLY_SOURCE  GenBank (default) or RefSeq. Use RefSeq for heavily sequenced taxa
+#                          (e.g. Listeria: 79,000 GenBank vs 7,500 RefSeq assemblies), since
+#                          dereplication cost grows with the square of the largest species bin
 #         THREADS          default: all CPUs
 #         DEREP_DISTANCE   Mash distance below which assemblies of a species are collapsed (default 0.001)
 #         SKETCH_SIZE      default 10000
@@ -10,7 +13,7 @@
 # Needs on PATH: datasets (ncbi-datasets-cli), unzip, mash, make_mashID_db, python3.
 #
 # Steps (each is skipped when its output already exists, so the script can be re-run):
-#   1. one dehydrated `datasets` archive for the taxon (GenBank, atypical assemblies excluded), then
+#   1. one dehydrated `datasets` archive for the taxon (GenBank or RefSeq, atypical assemblies excluded), then
 #      parallel rehydration into gzipped fasta files, with assembly_data_report.jsonl for names/TaxIDs;
 #   2. bin the genomes by species (scripts/bin_by_species.py);
 #   3. dereplicate each species bin with Assembly-dereplicator;
@@ -22,6 +25,7 @@ work="${1:?Usage: $0 <work_dir> [taxid] [db_name]}"
 taxid="${2:-1762}"
 name="${3:-mycobacteriaceae_$(date +%F)}"
 threads="${THREADS:-$(nproc)}"
+source="${ASSEMBLY_SOURCE:-GenBank}"
 derep_distance="${DEREP_DISTANCE:-0.001}"
 sketch_size="${SKETCH_SIZE:-10000}"
 derep="${DEREPLICATOR:-$HOME/prog/Assembly-dereplicator/dereplicator.py}"
@@ -40,8 +44,8 @@ cd "$work"
 report=ncbi/ncbi_dataset/data/assembly_data_report.jsonl
 
 if [[ ! -f "$report" ]]; then
-    log "1. Downloading the dehydrated archive for taxon $taxid"
-    datasets download genome taxon "$taxid" --assembly-source GenBank --exclude-atypical \
+    log "1. Downloading the dehydrated archive for taxon $taxid ($source assemblies)"
+    datasets download genome taxon "$taxid" --assembly-source "$source" --exclude-atypical \
         --include genome --dehydrated --filename ncbi.zip "${api[@]}"
     unzip -q -o ncbi.zip -d ncbi
 fi
