@@ -1,6 +1,15 @@
 # Outputs
 
-Two kinds of files are written to the output directory. The summary table is also printed.
+The output directory holds the summary in three forms, one table per sample, and a provenance file.
+The summary table is also printed.
+
+| File | Content |
+| --- | --- |
+| `summary_mashID.tsv` | One line per sample with its best hit and notes. |
+| `summary_mashID.json` | The same plus every reported hit per sample, for pipelines. |
+| `summary_mashID_mqc.tsv` | MultiQC custom-content table; `multiqc <dir>` picks it up. |
+| `<sample>_mashID.tsv` | The top `-n` hits of each sample. |
+| `mashID_run.json` | Provenance: mashID and Mash versions, command line, parameters, database path, size, MD5 and reference count, input files, timestamps, exit code. |
 
 ## `summary_mashID.tsv`
 
@@ -14,11 +23,14 @@ One line per sample with its best hit.
 | `Identity` | Mash containment estimate of the reference in the sample, between 0 and 1. |
 | `Shared_Hashes` | Hashes of the reference sketch found in the sample, e.g. `994/1000`. |
 | `Median_Multiplicity` | Median number of times the shared hashes were seen. Approximates k-mer coverage for reads; 1 for assemblies. |
+| `Est_Depth` | Reads only: total bases divided by the top reference's length, i.e. the sequencing depth if the sample is that organism. `NA` for assemblies or when the reference length is unknown. |
 | `P_Value` | Probability of the observed sharing by chance. |
 | `Accession` | Reference accession, parsed from the reference file name (`GCF_…`/`GCA_…` recognised). |
 | `TaxID` | NCBI TaxID from the database metadata, or `NA`. |
 | `Identification` | Organism name from the database metadata, or `No significant hit in database`. |
 | `Note` | Warnings; see below. |
+
+Columns from a [sample sheet](Usage#sample-sheets) are appended after `Note`.
 
 ## `<sample>_mashID.tsv`
 

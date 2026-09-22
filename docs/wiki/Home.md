@@ -15,6 +15,10 @@ Ion Torrent, Nanopore and PacBio reads, and with assemblies; inputs may be gzipp
 - [Installation](Installation)
 - [Usage](Usage)
 - [Example](Example)
+- [Interpreting results](Interpreting-results)
+- [Pipelines](Pipelines)
+- [FAQ](FAQ)
+- [Comparison](Comparison)
 - [Outputs](Outputs)
 - [Databases](Databases)
 - [Development](Development)
@@ -36,8 +40,9 @@ mashID -i /path/to/reads -o results
 3. `mash screen -w` estimates, for every reference in the database, how much of its sketch is
    contained in the sample. Winner-take-all credits shared hashes to the best reference.
 4. Hits to references shorter than 100 kb are ignored (partial records), the rest are ranked, and the
-   organism name and TaxID are read from the database's metadata sidecar.
-5. Notes are added from the hit list, and per-sample and summary tables are written.
+   organism name, TaxID and reference length are read from the database's metadata sidecar.
+5. Notes are added from the hit list, and the summary (TSV, JSON, MultiQC), per-sample tables and a
+   run-provenance file are written.
 
 > These pages are generated from [`docs/wiki`](https://github.com/duceppemo/mashID/tree/master/docs/wiki)
 > in the repository. Edit them there; a workflow publishes changes to this wiki.

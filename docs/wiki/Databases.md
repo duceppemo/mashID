@@ -39,10 +39,34 @@ make_mashID_db -i /path/to/genomes -o /path/to/db -p my_database -s 10000 -k 21 
 | `--metadata FILE` | TSV/CSV with `Accession`, `Organism` and optionally `TaxID` columns. |
 | `--assembly-report FILE.jsonl` | `assembly_data_report.jsonl` from an NCBI `datasets download genome` archive. |
 | `--annotate DB.msh` | Only (re)write the metadata sidecar of an existing database. |
+| `--check DB.msh` | Report quality issues of a database: references shorter than `--min-length`, unparsed organism names, missing TaxIDs, species listed under several genera (synonyms), single-reference organisms. |
 
 `scripts/build_mycobacteriaceae_db.sh` in the repository shows a full workflow: download all NCBI
 genomes of a taxon with `datasets`, dereplicate them per species with
 [Assembly-dereplicator](https://github.com/rrwick/Assembly-dereplicator), and sketch the database.
+
+## Checking a database
+
+```bash
+make_mashID_db --check /path/to/db.msh
+```
+
+Run this on any database before trusting it. On the 2025 Mycobacteriaceae database it reports seven
+references under 100 kb (partial records that would otherwise become false top hits), no TaxIDs, and
+40 species that appear under two or three genera because of the *Mycobacterium* →
+*Mycolicibacterium* / *Mycobacteroides* / *Mycolicibacter* reclassification. The last point matters:
+mashID counts *Mycobacterium abscessus* and *Mycobacteroides abscessus* as different organisms, so a
+sample may show a spurious "Possible mixture" between the two names. A sidecar built from NCBI's
+assembly report (`--annotate --assembly-report`) or a curated `--metadata` table harmonises them.
+
+## Provenance and known issues of the pre-built databases
+
+| Database | Built | Source and filters | Known issues |
+| --- | --- | --- | --- |
+| `mycobacteriaceae` | 2025-02-20 | All NCBI assemblies of taxon 1762 from the datasets web table (26,101), renamed and binned by the species in the first header, dereplicated per species at Mash distance 0.001 with Assembly-dereplicator 0.3.2, sketched k=21, s=1000. 3309 references. | Seven references < 100 kb; names parsed from headers, so genus synonyms are not merged; no TaxIDs; s=1000 gives identities in steps of 0.001. A rebuild with `scripts/build_mycobacteriaceae_db.sh` (s=10000, `--min-length`, TaxIDs from the assembly report) addresses all four. |
+| `listeria` | 2025-02-18 | All NCBI *Listeria* assemblies, dereplicated as above. | Names parsed from headers; no TaxIDs. Run `--check`. |
+| `progenomes3` | 2023-03 | proGenomes v3 representative genomes, sketched from the proGenomes fasta. | Header format differs from NCBI's; names come from the sidecar generated on first use, check them with `--check`. |
+| `refseq_bacteria` | 2023-01-19 | RefSeq bacteria, dereplicated at 0.01. | Large (653 MB); three years old. |
 
 ## The metadata sidecar
 

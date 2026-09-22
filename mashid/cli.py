@@ -42,9 +42,13 @@ def build_parser() -> argparse.ArgumentParser:
         description="Species identification from genome assemblies (fasta) or raw reads (fastq) using Mash.",
     )
     io = parser.add_argument_group("input/output")
-    io.add_argument("-i", "--input", metavar="PATH", type=Path, required=True,
+    io.add_argument("-i", "--input", metavar="PATH", type=Path, default=None,
                     help="Input directory (searched recursively) with fastq/fasta files, or a single "
                          "fastq/fasta file, gzipped or not. Paired-end files (R1/R2) are screened together.")
+    io.add_argument("--sample-sheet", metavar="FILE.tsv", type=Path, default=None,
+                    help="Instead of -i: a TSV/CSV with columns 'sample' and 'file' (one row per file, or "
+                         "files separated by ';'). Relative paths are resolved from the sheet's directory. "
+                         "Other columns are copied into the summary.")
     io.add_argument("-o", "--output", metavar="DIR", type=Path, required=True,
                     help="Output directory (created if needed).")
     io.add_argument("-d", "--database", metavar="FILE.msh|NAME", default=None,
@@ -76,6 +80,9 @@ def build_parser() -> argparse.ArgumentParser:
                           "otherwise produce false top hits). 0 keeps all hits. Default: %(default)s")
     flt.add_argument("--skip-stats", action="store_true",
                      help="Do not count reads/bases of the input files (faster on very large fastq).")
+    flt.add_argument("--fail-on", choices=["none", "no-hit", "note"], default="none",
+                     help="Exit with code 2 when any sample has no hit ('no-hit') or has any note or no hit "
+                          "('note'). For pipelines. Default: %(default)s")
 
     perf = parser.add_argument_group("performance")
     perf.add_argument("-t", "--threads", metavar=str(max_cpu), type=_positive_int, default=max_cpu,
@@ -90,7 +97,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.input is None and args.sample_sheet is None:
+        parser.error("one of -i/--input or --sample-sheet is required")
     logging.basicConfig(
         level=logging.DEBUG if args.debug else logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
@@ -110,6 +120,7 @@ def main(argv: list[str] | None = None) -> int:
 
     settings = Settings(
         input=args.input,
+        sample_sheet=args.sample_sheet,
         output=args.output,
         database=args.database,
         db_metadata=args.db_metadata,
@@ -124,16 +135,17 @@ def main(argv: list[str] | None = None) -> int:
         max_reads=args.max_reads,
         ambiguity_margin=args.ambiguity_margin,
         min_ref_length=max(0, args.min_ref_length),
+        fail_on=args.fail_on,
+        command_line=list(sys.argv if argv is None else ["mashID", *argv]),
     )
     try:
-        run(settings)
+        return run(settings)
     except MashIDError as exc:
         log.error("%s", exc)
         return 1
     except KeyboardInterrupt:
         log.error("Interrupted")
         return 130
-    return 0
 
 
 if __name__ == "__main__":

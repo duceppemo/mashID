@@ -195,6 +195,29 @@ def info_table(database: Path, exe: str = "mash") -> list[SketchInfo]:
     return rows
 
 
+def sketch_header(database: Path, exe: str = "mash") -> dict[str, int]:
+    """k-mer size, sketch size and sketch count from ``mash info -H``."""
+    out: dict[str, int] = {}
+    try:
+        result = _run([exe, "info", "-H", str(database)])
+    except MashIDError:
+        return out
+    for line in result.stdout.splitlines():
+        key, _, value = line.partition(":")
+        key = key.strip().lower()
+        value = value.strip().split()[0] if value.strip() else ""
+        try:
+            if key.startswith("k-mer size"):
+                out["kmer"] = int(value)
+            elif key.startswith("target min-hashes"):
+                out["sketch_size"] = int(value)
+            elif key == "sketches":
+                out["sketches"] = int(value)
+        except ValueError:
+            continue
+    return out
+
+
 def sketch_count(database: Path, exe: str = "mash") -> int | None:
     """Number of sketches in a database, from ``mash info -H`` (None if unavailable)."""
     try:

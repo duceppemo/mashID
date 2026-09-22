@@ -32,7 +32,7 @@ mashID -i example/reads -o example_out -d example/db/example.msh
 
 | Sample | Files | Result |
 | --- | --- | --- |
-| `alpha` | `alpha_S1_L001_R1_001.fastq.gz`, `alpha_S1_L001_R2_001.fastq.gz` | Paired-end reads. Both files share the sample name once the Illumina suffixes are stripped, so they are screened together: 8000 reads, 999/1000 hashes of *E. alpha* found, median multiplicity 8 (≈ k-mer coverage). |
+| `alpha` | `alpha_S1_L001_R1_001.fastq.gz`, `alpha_S1_L001_R2_001.fastq.gz` | Paired-end reads. Both files share the sample name once the Illumina suffixes are stripped, so they are screened together: 8000 reads, 999/1000 hashes of *E. alpha* found, median multiplicity 8 and an estimated depth of 10× (1.2 Mb of reads over a 120 kb reference). |
 | `mixed_beta_delta` | `mixed_beta_delta.fastq.gz` | Half the reads come from *E. beta* subsp. *gamma*, half from *F. delta*. The top hit is one of them; the other keeps 996/1000 of its hashes under winner-take-all, so the `Note` reads `Possible mixture with: Fictivibrio delta`. |
 | `delta_assembly` | `delta_assembly.fasta.gz` | A two-contig assembly of *F. delta*: 2 sequences, identity ≈ 1, multiplicity 1 as always for assemblies. |
 | `unknown` | `unknown.fasta` | A random sequence: nothing reaches the identity threshold, so `No significant hit in database` and `NA` elsewhere. |
@@ -40,11 +40,11 @@ mashID -i example/reads -o example_out -d example/db/example.msh
 ## Expected summary
 
 ```
-Sample            Sequences  Bases    Identity  Shared_Hashes  Median_Multiplicity  P_Value  Accession        TaxID  Identification                  Note
-alpha             8000       1200000  0.999952  999/1000       8                    0        GCF_000000001.1  NA     Exemplaria alpha
-delta_assembly    2          120000   0.999952  999/1000       1                    0        GCF_000000003.1  NA     Fictivibrio delta
-mixed_beta_delta  11000      1650000  0.999857  997/1000       6                    0        GCF_000000002.1  NA     Exemplaria beta subsp. gamma    Possible mixture with: Fictivibrio delta
-unknown           1          30000    NA        NA             NA                   NA       NA               NA     No significant hit in database
+Sample            Sequences  Bases    Identity  Shared_Hashes  Median_Multiplicity  Est_Depth  P_Value  Accession        TaxID  Identification                  Note
+alpha             8000       1200000  0.999952  999/1000       8                    10.0       0        GCF_000000001.1  NA     Exemplaria alpha
+delta_assembly    2          120000   0.999952  999/1000       1                    NA         0        GCF_000000003.1  NA     Fictivibrio delta
+mixed_beta_delta  11000      1650000  0.999857  997/1000       6                    13.8       0        GCF_000000002.1  NA     Exemplaria beta subsp. gamma    Possible mixture with: Fictivibrio delta
+unknown           1          30000    NA        NA             NA                   NA         NA       NA               NA     No significant hit in database
 ```
 
 The per-sample table of the mixed sample shows both organisms with almost all of their hashes present,

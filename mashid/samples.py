@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import logging
 import os
 import re
@@ -31,6 +32,7 @@ class Sample:
     sequences: int | None = None  # number of reads (fastq) or contigs (fasta)
     bases: int | None = None
     warnings: list[str] = field(default_factory=list)
+    extra: dict[str, str] = field(default_factory=dict)  # extra columns from a sample sheet
 
 
 def strip_seq_extension(filename: str) -> str | None:
@@ -129,3 +131,60 @@ def group_samples(files: list[Path]) -> list[Sample]:
 
 def discover_samples(input_path: Path) -> list[Sample]:
     return group_samples(find_sequence_files(input_path))
+
+
+def read_sample_sheet(path: Path) -> tuple[list[Sample], list[str]]:
+    """Read a TSV/CSV sample sheet: columns ``sample`` and ``file`` (or ``files``), one row per file or
+    per sample with files separated by ';' or ','. Relative paths are resolved against the sheet's
+    directory. Other columns are kept on each sample (``extra``) and returned as ``extra_columns``.
+    """
+    path = Path(path)
+    if not path.is_file():
+        raise MashIDError(f"Sample sheet not found: {path}")
+    text = path.read_text(encoding="utf-8-sig")
+    lines = [ln for ln in text.splitlines() if ln.strip() and not ln.startswith("#")]
+    if not lines:
+        raise MashIDError(f"Sample sheet is empty: {path}")
+    delimiter = "\t" if "\t" in lines[0] else ","
+    reader = csv.DictReader(lines, delimiter=delimiter)
+    cols = {c.strip().lower(): c for c in (reader.fieldnames or [])}
+    sample_col = cols.get("sample") or cols.get("sample_id") or cols.get("name")
+    file_col = cols.get("file") or cols.get("files") or cols.get("path") or cols.get("fastq")
+    if not sample_col or not file_col:
+        raise MashIDError(f"{path}: expected columns 'sample' and 'file' (or 'files'); found {reader.fieldnames}")
+    extra_columns = [c for c in (reader.fieldnames or []) if c not in (sample_col, file_col)]
+
+    grouped: dict[str, Sample] = {}
+    for n, row in enumerate(reader, start=2):
+        name = (row.get(sample_col) or "").strip()
+        if not name:
+            raise MashIDError(f"{path}: line {n} has no sample name")
+        if "/" in name or name in (".", ".."):
+            raise MashIDError(f"{path}: line {n}: sample name {name!r} cannot contain '/'")
+        files = [f.strip() for f in re.split(r"[;,]", row.get(file_col) or "") if f.strip()]
+        if not files:
+            raise MashIDError(f"{path}: line {n} ({name}) lists no file")
+        sample = grouped.get(name)
+        if sample is None:
+            extra = {c: (row.get(c) or "").strip() for c in extra_columns}
+            sample = Sample(name=name, files=[], seq_type="", extra=extra)
+            grouped[name] = sample
+        for f in files:
+            fpath = Path(f).expanduser()
+            if not fpath.is_absolute():
+                fpath = path.parent / fpath
+            if not fpath.is_file():
+                raise MashIDError(f"{path}: line {n} ({name}): file not found: {fpath}")
+            if not is_sequence_file(fpath):
+                raise MashIDError(f"{path}: line {n} ({name}): not a recognised sequence file: {fpath}")
+            sample.files.append(fpath.resolve())
+
+    samples: list[Sample] = []
+    for name, sample in grouped.items():
+        types = {seq_type_of(f) for f in sample.files}
+        if len(types) > 1:
+            raise MashIDError(f"Sample '{name}' mixes fasta and fastq files in the sample sheet")
+        sample.seq_type = types.pop()
+        sample.files = sorted(set(sample.files))
+        samples.append(sample)
+    return samples, extra_columns

@@ -10,8 +10,9 @@ import tempfile
 from pathlib import Path
 
 from mashid import MashIDError, __version__
-from mashid.mash import find_mash, info_table, mash_version, sketch, sketch_count
+from mashid.mash import find_mash, info_table, mash_version, sketch, sketch_count, sketch_header
 from mashid.metadata import (
+    NA,
     entries_from_sketches,
     read_metadata,
     read_ncbi_assembly_report,
@@ -134,6 +135,80 @@ def make_database(input_path: Path, output_dir: Path, prefix: str, threads: int,
     return db
 
 
+def check_database(database: Path, min_length: int = DEFAULT_MIN_LENGTH) -> list[str]:
+    """Report quality issues of a database: short references, unparsed names, missing TaxIDs, synonyms.
+
+    Returns the report lines (also logged). Problems are listed but do not fail the command."""
+    exe = find_mash()
+    if not database.is_file():
+        raise MashIDError(f"Mash database not found: {database}")
+    header = sketch_header(database, exe)
+    sidecar = sidecar_path(database)
+    if sidecar.is_file():
+        entries = list(read_metadata(sidecar).values())
+        source = f"metadata sidecar {sidecar.name}"
+    else:
+        entries, _ = entries_from_sketches(info_table(database, exe))
+        source = "reference headers (no metadata sidecar; run --annotate to create one)"
+
+    lines = [f"Database: {database}",
+             f"  sketches: {len(entries)}   k-mer size: {header.get('kmer', '?')}   "
+             f"sketch size: {header.get('sketch_size', '?')}   names from: {source}"]
+    problems = 0
+
+    short = [e for e in entries if e.length is not None and e.length < min_length]
+    if short:
+        problems += len(short)
+        lines.append(f"  {len(short)} reference(s) shorter than {min_length} bp (partial records; mashID ignores "
+                     f"their hits by default, rebuild with --min-length to drop them):")
+        shortest = sorted(short, key=lambda e: e.length or 0)[:20]
+        lines.extend(f"    {e.accession}  {e.length} bp  {e.organism}" for e in shortest)
+        if len(short) > 20:
+            lines.append(f"    ... and {len(short) - 20} more")
+
+    target = header.get("sketch_size")
+    small = [e for e in entries if e.hashes is not None and target and e.hashes < target]
+    if small:
+        lines.append(f"  {len(small)} reference(s) have fewer hashes than the sketch size (very short sequences)")
+
+    unparsed = [e for e in entries
+                if e.organism in (NA, "", "unknown", e.accession) or len(e.organism.split()) < 2]
+    if unparsed:
+        problems += len(unparsed)
+        lines.append(f"  {len(unparsed)} reference(s) without a usable organism name (fix with --metadata or "
+                     f"--assembly-report):")
+        lines.extend(f"    {e.accession}  {e.organism!r}  {e.description[:70]}" for e in unparsed[:20])
+
+    with_taxid = sum(1 for e in entries if e.taxid not in (NA, "", None))
+    lines.append(f"  TaxIDs: {with_taxid}/{len(entries)} references"
+                 + ("" if with_taxid else " (none; use --assembly-report or --metadata to add them)"))
+
+    # Same species epithet under different genera usually means synonyms from renamed genera
+    # (Mycobacterium abscessus vs Mycobacteroides abscessus): mashID treats them as different organisms.
+    by_epithet: dict[str, set[str]] = {}
+    for e in entries:
+        toks = e.organism.split()
+        if len(toks) >= 2 and toks[1] not in ("sp.", "sp", "spp."):
+            genus = toks[1] if toks[0] == "Candidatus" and len(toks) > 2 else toks[0]
+            epithet = toks[2] if toks[0] == "Candidatus" and len(toks) > 2 else toks[1]
+            by_epithet.setdefault(epithet, set()).add(genus)
+    synonyms = {ep: g for ep, g in by_epithet.items() if len(g) > 1}
+    if synonyms:
+        problems += len(synonyms)
+        lines.append(f"  {len(synonyms)} species epithet(s) appear under several genera (likely synonyms; "
+                     "harmonise with --metadata so they count as one organism):")
+        lines.extend(f"    {ep}: {', '.join(sorted(g))}" for ep, g in sorted(synonyms.items())[:20])
+
+    organisms = {e.organism for e in entries}
+    lines.append(f"  distinct organism names: {len(organisms)}")
+    singles = sum(1 for o in organisms if sum(1 for e in entries if e.organism == o) == 1)
+    lines.append(f"  organisms represented by a single reference: {singles}")
+    lines.append("Result: " + (f"{problems} issue(s) found" if problems else "no issues found"))
+    for line in lines:
+        log.info("%s", line)
+    return lines
+
+
 def annotate_database(database: Path, metadata: Path | None, assembly_report: Path | None) -> Path:
     """Write the metadata sidecar for an existing database without re-sketching."""
     exe = find_mash()
@@ -166,6 +241,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--annotate", metavar="DB.msh", type=Path, default=None,
                         help="Only (re)write the metadata sidecar for an existing database; no sketching. "
                              "-i and -o are then not needed.")
+    parser.add_argument("--check", metavar="DB.msh", type=Path, default=None,
+                        help="Report quality issues of an existing database (short references, unparsed "
+                             "names, missing TaxIDs, genus synonyms) and exit.")
     parser.add_argument("-t", "--threads", metavar="4", type=int, default=4,
                         help="Number of threads. Default: %(default)s")
     parser.add_argument("-s", "--sketch-size", metavar="10000", type=int, default=10000,
@@ -187,11 +265,13 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO,
                         format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
-    if args.annotate is None and (args.input is None or args.output is None):
-        parser.error("-i/--input and -o/--output are required (unless using --annotate)")
+    if args.annotate is None and args.check is None and (args.input is None or args.output is None):
+        parser.error("-i/--input and -o/--output are required (unless using --annotate or --check)")
     threads = min(max(1, args.threads), os.cpu_count() or 1)
     try:
-        if args.annotate is not None:
+        if args.check is not None:
+            check_database(args.check, max(0, args.min_length))
+        elif args.annotate is not None:
             annotate_database(args.annotate, args.metadata, args.assembly_report)
         else:
             make_database(args.input, args.output, args.prefix, threads, args.sketch_size, args.kmer_size,

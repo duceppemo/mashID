@@ -21,9 +21,11 @@
 </p>
 
 mashID screens each sample against a Mash sketch database, reports the best-matching organisms with
-identity, coverage and p-value, and flags mixtures, ambiguous calls and low coverage. It takes fasta
+identity, depth and p-value, and flags mixtures, ambiguous calls and low coverage. It takes fasta
 or fastq files, gzipped or not, from Illumina, Ion Torrent, Nanopore or PacBio. Paired-end files are
 screened together.
+
+<p align="center"><img src="docs/images/workflow.svg" alt="mashID workflow" width="720"></p>
 
 ## Quick start
 
@@ -37,11 +39,16 @@ mashID -i /path/to/fastq_or_fasta -o results
 ```
 
 ```
-Sample    Sequences  Bases      Identity  Shared_Hashes  Median_Multiplicity  P_Value  Accession        TaxID  Identification                            Note
-MBWGS440  2741728    625918949  0.999713  994/1000       122                  0        NAZK01000001.1   NA     Mycobacterium tuberculosis variant bovis
+Sample            Sequences  Bases    Identity  Shared_Hashes  Median_Multiplicity  Est_Depth  P_Value  Accession        TaxID  Identification                  Note
+alpha             8000       1200000  0.999952  999/1000       8                    10.0       0        GCF_000000001.1  NA     Exemplaria alpha
 ```
 
-Results are written to `summary_mashID.tsv` (one line per sample) and `<sample>_mashID.tsv` (top hits).
+Results are written to `summary_mashID.tsv` (one line per sample), `<sample>_mashID.tsv` (top hits), a
+JSON summary, a MultiQC table and a run-provenance file.
+
+mashID makes species-level calls. Within very close groups such as the *Mycobacterium tuberculosis*
+complex it cannot tell the members apart; use a SNP-based method for variants and lineages. See
+[when to use which tool](https://github.com/duceppemo/mashID/wiki/Comparison).
 
 To check an installation without downloading anything, run the bundled [example](example/):
 
@@ -57,6 +64,10 @@ maintained in [`docs/wiki`](docs/wiki):
 - [Installation](https://github.com/duceppemo/mashID/wiki/Installation) — conda, pip, troubleshooting
 - [Usage](https://github.com/duceppemo/mashID/wiki/Usage) — options, input files, sample naming, quick screening of large runs
 - [Example](https://github.com/duceppemo/mashID/wiki/Example) — the bundled dataset and how to read its results
+- [Interpreting results](https://github.com/duceppemo/mashID/wiki/Interpreting-results) — clean isolates, mixtures, novel species, wrong database
+- [Pipelines](https://github.com/duceppemo/mashID/wiki/Pipelines) — Nextflow, Snakemake, MultiQC, JSON, sample sheets
+- [FAQ](https://github.com/duceppemo/mashID/wiki/FAQ) — troubleshooting
+- [Comparison](https://github.com/duceppemo/mashID/wiki/Comparison) — mashID versus Kraken2, sourmash, GTDB-Tk and others
 - [Outputs](https://github.com/duceppemo/mashID/wiki/Outputs) — columns, the `Note` flags, limits of Mash identification
 - [Databases](https://github.com/duceppemo/mashID/wiki/Databases) — pre-built databases, building your own, metadata sidecar
 - [Development](https://github.com/duceppemo/mashID/wiki/Development) — tests, CI, releases, bioconda

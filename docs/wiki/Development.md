@@ -30,7 +30,9 @@ The integration tests build a small synthetic database and are skipped when `mas
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request: environment from `environment.yml`
-on Python 3.10 and 3.12, `ruff check`, `pytest`, and the CLIs' `--help`.
+on Linux with Python 3.10 and 3.12 and on macOS with Python 3.12, `ruff check`, `pytest`, and the
+CLIs' `--help`. `tests/test_taxonomy_corpus.py` checks the header parser against 3309 real NCBI
+headers, and `tests/test_example.py` keeps the shipped example's results exact.
 
 ## Releasing
 

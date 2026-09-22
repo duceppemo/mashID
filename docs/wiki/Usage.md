@@ -15,6 +15,7 @@ usage: mashID [-h] -i PATH -o DIR [-d FILE.msh|NAME] [--db-metadata FILE.tsv]
 | Option | Description |
 | --- | --- |
 | `-i, --input PATH` | Input directory (searched recursively) with fastq/fasta files, or a single file, gzipped or not. Paired-end files (R1/R2) are screened together. |
+| `--sample-sheet FILE.tsv` | Instead of `-i`: a TSV/CSV with columns `sample` and `file` (one row per file, or files separated by `;`). Relative paths are resolved from the sheet's directory. Other columns are copied into the summary. See below. |
 | `-o, --output DIR` | Output directory, created if needed. |
 | `-d, --database FILE.msh\|NAME` | Mash sketch database: a `.msh` file, or the name of a downloaded pre-built database (`mycobacteriaceae`, `listeria`, `progenomes3`, `refseq_bacteria`). Default: `mycobacteriaceae`. |
 | `--db-metadata FILE.tsv` | Table mapping reference accessions to organism names and TaxIDs. Default: the `<database>.metadata.tsv` sidecar. |
@@ -32,6 +33,7 @@ usage: mashID [-h] -i PATH -o DIR [-d FILE.msh|NAME] [--db-metadata FILE.tsv]
 | `--ambiguity-margin 0.005` | Flag a sample as ambiguous when a different organism scores within this identity margin of the top hit. |
 | `--min-ref-length 100000` | Ignore hits to references shorter than this many bp. `0` keeps all hits. |
 | `--skip-stats` | Do not count reads/bases of the input files. |
+| `--fail-on {none,no-hit,note}` | Exit with code 2 when any sample has no hit, or has any note or no hit. For pipelines. |
 
 ### performance
 
@@ -78,6 +80,22 @@ The sample name is the file name without its extension and without Illumina read
 
 Files from several lanes of the same sample are grouped the same way. A sample cannot mix fasta and
 fastq files. Nothing is concatenated or copied: Mash reads all files of a sample directly.
+
+## Sample sheets
+
+When file names do not encode sample names cleanly (Nanopore barcodes, files from several runs, LIMS
+identifiers), give `--sample-sheet` instead of `-i`:
+
+```
+sample     file                              expected
+ISO-2024-1 runA/barcode01_pass.fastq.gz      Mycobacterium bovis
+ISO-2024-2 runA/barcode02_pass.fastq.gz      Mycobacterium bovis
+ISO-2024-3 runB/S3_R1.fastq.gz;runB/S3_R2.fastq.gz  Listeria monocytogenes
+```
+
+Tab- or comma-separated, one row per file or per sample with files joined by `;`. Paths are relative to
+the sheet. Any other column (`expected` above) is carried into `summary_mashID.tsv` and
+`summary_mashID.json`, which makes a "matches expectation" check a one-liner downstream.
 
 ## Quick screening of large runs
 

@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- `Est_Depth` column: bases divided by the top reference's length (reads only).
+- `summary_mashID.json`, `summary_mashID_mqc.tsv` (MultiQC custom content) and `mashID_run.json`
+  (provenance: versions, command line, parameters, database MD5, inputs, timestamps, exit code).
+- `--sample-sheet`: explicit sample-to-file mapping; extra columns are carried into the summary.
+- `--fail-on {no-hit,note}` exit code 2 for pipeline gating.
+- `make_mashID_db --check`: database quality report (short references, unparsed names, missing TaxIDs,
+  genus synonyms).
+- `scripts/build_mycobacteriaceae_db.sh` rewritten around NCBI `datasets` dehydrated downloads and
+  `scripts/bin_by_species.py`; TaxIDs from the assembly report.
+- Header-parser regression corpus of 3309 real NCBI headers; macOS job in CI.
+- Wiki pages: Interpreting results, Pipelines, FAQ, Comparison; database provenance and known issues.
+
 ## 0.2.1 (2026-09-22)
 
 ### Added
