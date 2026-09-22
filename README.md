@@ -34,7 +34,7 @@ conda create -n mashID -c conda-forge -c bioconda python=3.12 mash=2.3 python-is
 conda activate mashID
 pip install https://github.com/duceppemo/mashID/archive/refs/tags/v0.2.1.tar.gz
 
-mashID_download_db mycobacteriaceae          # 27 MB, MD5-verified
+mashID_download_db mycobacteriaceae          # 284 MB, MD5-verified
 mashID -i /path/to/fastq_or_fasta -o results
 ```
 

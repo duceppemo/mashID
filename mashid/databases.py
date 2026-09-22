@@ -29,6 +29,10 @@ class RemoteDatabase:
     size: int  # bytes
     description: str
     doi: str
+    # Optional metadata sidecar (<stem>.metadata.tsv) published with the database.
+    metadata_url: str | None = None
+    metadata_md5: str | None = None
+    metadata_size: int = 0
 
 
 REGISTRY: dict[str, RemoteDatabase] = {
@@ -36,12 +40,26 @@ REGISTRY: dict[str, RemoteDatabase] = {
     for db in (
         RemoteDatabase(
             name="mycobacteriaceae",
+            filename="mycobacteriaceae_2026-09-22.msh",
+            url="https://ndownloader.figshare.com/files/69229306",
+            md5="cc73df8b8b5f7257849c6039430f2a43",
+            size=283_977_000,
+            description="Mycobacteriaceae (NCBI taxon 1762): 16,189 GenBank assemblies as of 2026-09-22, "
+                        "dereplicated per species at 99.9% identity to 3534 references, with NCBI TaxIDs. "
+                        "k=21, s=10000.",
+            doi="10.6084/m9.figshare.33965176.v1",
+            metadata_url="https://ndownloader.figshare.com/files/69229303",
+            metadata_md5="aca42431cca7dea41bf2637555817499",
+            metadata_size=1_067_237,
+        ),
+        RemoteDatabase(
+            name="mycobacteriaceae-2025",
             filename="mycobacteriaceae_2025-02-20.msh",
             url="https://ndownloader.figshare.com/files/52609139",
             md5="2fea9a28a2488b07f906e359e37acf6c",
             size=27_733_552,
-            description="Mycobacteriaceae (NCBI taxon 1762), all NCBI genomes as of 2025-02-20, "
-                        "dereplicated per species at 99.9% identity. k=21, s=1000.",
+            description="Previous Mycobacteriaceae database (2025-02-20): 3309 references, k=21, s=1000, no "
+                        "TaxIDs. Kept for reproducibility; prefer 'mycobacteriaceae'.",
             doi="10.6084/m9.figshare.28489304.v1",
         ),
         RemoteDatabase(
@@ -131,29 +149,13 @@ def _human(n: float) -> str:
     return f"{n:.1f} GB"
 
 
-def download(name: str, directory: Path | None = None, force: bool = False, verify: bool = True) -> Path:
-    """Download a registry database to ``directory`` (default: db_dir()), verifying its MD5."""
-    if name not in REGISTRY:
-        raise MashIDError(f"Unknown database '{name}'. Available: {', '.join(REGISTRY)}")
-    remote = REGISTRY[name]
-    directory = directory or db_dir()
-    dest = directory / remote.filename
-    if dest.is_file() and not force:
-        if not verify or md5sum(dest) == remote.md5:
-            log.info("%s is already installed: %s", name, dest)
-            return dest
-        log.warning("%s exists but its checksum does not match; re-downloading", dest)
-
-    directory.mkdir(parents=True, exist_ok=True)
-    free = shutil.disk_usage(directory).free
-    if free < remote.size * 1.1:
-        raise MashIDError(f"Not enough free space in {directory}: need {_human(remote.size)}, have {_human(free)}")
-
-    log.info("Downloading %s (%s) from %s", remote.filename, _human(remote.size), remote.url)
+def _fetch(url: str, dest: Path, size: int, md5: str | None, verify: bool) -> None:
+    """Stream ``url`` to ``dest`` through a .part file, verifying the MD5 when given."""
+    log.info("Downloading %s (%s) from %s", dest.name, _human(size), url)
     tmp = dest.with_name(dest.name + ".part")
     digest = hashlib.md5()
     received = 0
-    request = urllib.request.Request(remote.url, headers={"User-Agent": f"mashID/{__version__}"})
+    request = urllib.request.Request(url, headers={"User-Agent": f"mashID/{__version__}"})
     try:
         with urllib.request.urlopen(request, timeout=60) as response, open(tmp, "wb") as out:
             next_report = 0.1
@@ -164,21 +166,57 @@ def download(name: str, directory: Path | None = None, force: bool = False, veri
                 out.write(chunk)
                 digest.update(chunk)
                 received += len(chunk)
-                if remote.size and received / remote.size >= next_report:
-                    log.info("  %3.0f%% (%s)", 100 * received / remote.size, _human(received))
+                if size and received / size >= next_report:
+                    log.info("  %3.0f%% (%s)", 100 * received / size, _human(received))
                     next_report += 0.1
     except (urllib.error.URLError, OSError) as exc:
         tmp.unlink(missing_ok=True)
-        raise MashIDError(f"Download of {remote.url} failed: {exc}") from exc
-
-    if verify and digest.hexdigest() != remote.md5:
+        raise MashIDError(f"Download of {url} failed: {exc}") from exc
+    if verify and md5 and digest.hexdigest() != md5:
         tmp.unlink(missing_ok=True)
         raise MashIDError(
-            f"Checksum mismatch for {remote.filename}: expected {remote.md5}, got {digest.hexdigest()}. "
+            f"Checksum mismatch for {dest.name}: expected {md5}, got {digest.hexdigest()}. "
             "The download may be corrupted or the remote file may have changed."
         )
     os.replace(tmp, dest)
-    log.info("Installed %s -> %s", name, dest)
+
+
+def _up_to_date(path: Path, md5: str | None, verify: bool) -> bool:
+    return path.is_file() and (not verify or md5 is None or md5sum(path) == md5)
+
+
+def download(name: str, directory: Path | None = None, force: bool = False, verify: bool = True) -> Path:
+    """Download a registry database (and its metadata sidecar, when published) to ``directory``
+    (default: db_dir()), verifying MD5 checksums. Existing, matching files are kept."""
+    if name not in REGISTRY:
+        raise MashIDError(f"Unknown database '{name}'. Available: {', '.join(REGISTRY)}")
+    remote = REGISTRY[name]
+    directory = directory or db_dir()
+    dest = directory / remote.filename
+    sidecar = directory / (remote.filename[:-4] + ".metadata.tsv")
+
+    need_db = force or not _up_to_date(dest, remote.md5, verify)
+    need_meta = remote.metadata_url is not None and (
+        force or not _up_to_date(sidecar, remote.metadata_md5, verify))
+    if dest.is_file() and need_db and not force:
+        log.warning("%s exists but its checksum does not match; re-downloading", dest)
+    if not need_db and not need_meta:
+        log.info("%s is already installed: %s", name, dest)
+        return dest
+
+    directory.mkdir(parents=True, exist_ok=True)
+    needed = (remote.size if need_db else 0) + (remote.metadata_size if need_meta else 0)
+    free = shutil.disk_usage(directory).free
+    if free < needed * 1.1:
+        raise MashIDError(f"Not enough free space in {directory}: need {_human(needed)}, have {_human(free)}")
+
+    if need_db:
+        _fetch(remote.url, dest, remote.size, remote.md5, verify)
+        log.info("Installed %s -> %s", name, dest)
+    if need_meta:
+        assert remote.metadata_url is not None
+        _fetch(remote.metadata_url, sidecar, remote.metadata_size, remote.metadata_md5, verify)
+        log.info("Installed metadata -> %s", sidecar)
     ensure_sidecar(dest)
     return dest
 

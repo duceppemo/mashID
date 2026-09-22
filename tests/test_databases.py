@@ -23,6 +23,9 @@ def test_registry_is_well_formed():
     for name, db in REGISTRY.items():
         assert db.name == name and db.filename.endswith(".msh")
         assert db.url.startswith("https://") and len(db.md5) == 32 and db.size > 0
+        if db.metadata_url:
+            assert db.metadata_url.startswith("https://") and len(db.metadata_md5 or "") == 32 and db.metadata_size > 0
+    assert REGISTRY[DEFAULT_DB_NAME].metadata_url  # the default database ships its TaxID sidecar
 
 
 def test_db_dir_env(monkeypatch, tmp_path):
@@ -57,6 +60,7 @@ def http_file(tmp_path):
     served = tmp_path / "served"
     served.mkdir()
     (served / "fake.msh").write_bytes(payload)
+    (served / "fake.metadata.tsv").write_text("Accession\tOrganism\tTaxID\nX1\tGenusa one\t7\n")
     handler = partial(http.server.SimpleHTTPRequestHandler, directory=str(served))
     handler.log_message = lambda *a, **k: None  # type: ignore[assignment]
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
@@ -102,3 +106,25 @@ def test_download_cli(monkeypatch, tmp_path, http_file, capsys):
     assert (tmp_path / "dbs" / "fake.msh").is_file()
     assert [r["Installed"] for r in list_rows() if r["Name"].startswith("fake")] == ["yes"]
     assert download_main(["nope"]) == 1
+
+
+def test_download_fetches_the_metadata_sidecar(monkeypatch, tmp_path, http_file):
+    url, payload, md5 = http_file
+    meta_url = url.replace("fake.msh", "fake.metadata.tsv")
+    meta_bytes = b"Accession\tOrganism\tTaxID\nX1\tGenusa one\t7\n"
+    remote = RemoteDatabase("withmeta", "fake.msh", url, md5, len(payload), "t", "d",
+                            metadata_url=meta_url, metadata_md5=hashlib.md5(meta_bytes).hexdigest(),
+                            metadata_size=len(meta_bytes))
+    monkeypatch.setitem(REGISTRY, "withmeta", remote)
+    dest_dir = tmp_path / "dbs"
+    download("withmeta", dest_dir)
+    assert (dest_dir / "fake.metadata.tsv").read_bytes() == meta_bytes  # published sidecar, not a generated one
+    # a stale local sidecar is replaced on the next call, the database itself is kept
+    (dest_dir / "fake.metadata.tsv").write_text("stale")
+    download("withmeta", dest_dir)
+    assert (dest_dir / "fake.metadata.tsv").read_bytes() == meta_bytes
+    bad = RemoteDatabase("badmeta", "bad.msh", url, md5, len(payload), "t", "d",
+                         metadata_url=meta_url, metadata_md5="0" * 32, metadata_size=len(meta_bytes))
+    monkeypatch.setitem(REGISTRY, "badmeta", bad)
+    with pytest.raises(MashIDError, match="Checksum mismatch for bad.metadata.tsv"):
+        download("badmeta", dest_dir)

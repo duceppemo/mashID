@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Changed
+- The default `mycobacteriaceae` database is the 2026-09-22 rebuild (3534 references, s=10000, NCBI
+  TaxIDs, no partial records, [Figshare](https://doi.org/10.6084/m9.figshare.33965176)); it ships its
+  metadata sidecar, which `mashID_download_db` now fetches alongside the sketch. The 2025 database
+  remains available as `mycobacteriaceae-2025`.
+
 ### Added
 - `Est_Depth` column: bases divided by the top reference's length (reads only).
 - `summary_mashID.json`, `summary_mashID_mqc.tsv` (MultiQC custom content) and `mashID_run.json`

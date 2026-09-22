@@ -13,7 +13,8 @@ mashID_download_db --all --dir /db    # download everything somewhere else
 
 | Name | Content | Size |
 | --- | --- | --- |
-| `mycobacteriaceae` (default) | Mycobacteriaceae (NCBI taxon 1762), all NCBI genomes as of 2025-02-20, dereplicated per species at 99.9% identity. k=21, s=1000. [Figshare](https://doi.org/10.6084/m9.figshare.28489304.v1) | 27 MB |
+| `mycobacteriaceae` (default) | Mycobacteriaceae (NCBI taxon 1762): 16,189 GenBank assemblies as of 2026-09-22, dereplicated per species at 99.9% identity to 3534 references, NCBI TaxIDs for all. k=21, s=10000. Ships with its metadata sidecar. [Figshare](https://doi.org/10.6084/m9.figshare.33965176) | 284 MB |
+| `mycobacteriaceae-2025` | The previous Mycobacteriaceae database (2025-02-20): 3309 references, k=21, s=1000, no TaxIDs. Kept for reproducibility. [Figshare](https://doi.org/10.6084/m9.figshare.28489304.v1) | 27 MB |
 | `listeria` | *Listeria* spp., all NCBI genomes as of 2025-02-18, dereplicated. [Figshare](https://doi.org/10.6084/m9.figshare.28489262.v1) | 46 MB |
 | `progenomes3` | proGenomes v3 representative genomes, all bacteria and archaea. [Figshare](https://doi.org/10.6084/m9.figshare.22312282.v1) | 331 MB |
 | `refseq_bacteria` | RefSeq bacteria as of 2023-01-19, dereplicated at 99% identity. [Figshare](https://doi.org/10.6084/m9.figshare.22312240.v2) | 653 MB |
@@ -51,7 +52,7 @@ genomes of a taxon with `datasets`, dereplicate them per species with
 make_mashID_db --check /path/to/db.msh
 ```
 
-Run this on any database before trusting it. On the 2025 Mycobacteriaceae database it reports seven
+Run this on any database before trusting it. On the 2025 Mycobacteriaceae database (`mycobacteriaceae-2025`) it reports seven
 references under 100 kb (partial records that would otherwise become false top hits), no TaxIDs, and
 40 species that appear under two or three genera because of the *Mycobacterium* →
 *Mycolicibacterium* / *Mycobacteroides* / *Mycolicibacter* reclassification. The last point matters:
@@ -63,7 +64,8 @@ assembly report (`--annotate --assembly-report`) or a curated `--metadata` table
 
 | Database | Built | Source and filters | Known issues |
 | --- | --- | --- | --- |
-| `mycobacteriaceae` | 2025-02-20 | All NCBI assemblies of taxon 1762 from the datasets web table (26,101), renamed and binned by the species in the first header, dereplicated per species at Mash distance 0.001 with Assembly-dereplicator 0.3.2, sketched k=21, s=1000. 3309 references. | Seven references < 100 kb; names parsed from headers, so genus synonyms are not merged; no TaxIDs; s=1000 gives identities in steps of 0.001. A rebuild with `scripts/build_mycobacteriaceae_db.sh` (s=10000, `--min-length`, TaxIDs from the assembly report) addresses all four. |
+| `mycobacteriaceae` | 2026-09-22 | `scripts/build_mycobacteriaceae_db.sh`: all 16,189 GenBank assemblies of taxon 1762 (atypical excluded) via NCBI Datasets, binned by species from the assembly report, dereplicated per species at Mash distance 0.001 with Assembly-dereplicator 0.3.2 (*M. tuberculosis*: 211 of 8722 kept), references < 100 kb excluded, sketched k=21, s=10000. 3534 references; names and TaxIDs from the assembly report, strain text removed. | `--check` reports one species under two genus spellings (`[Mycobacterium] chelonae`, NCBI's own naming). MTBC members are not separable (see Interpreting results). |
+| `mycobacteriaceae-2025` | 2025-02-20 | All NCBI assemblies of taxon 1762 from the datasets web table (26,101), renamed and binned by the species in the first header, dereplicated per species at Mash distance 0.001 with Assembly-dereplicator 0.3.2, sketched k=21, s=1000. 3309 references. | Seven references < 100 kb; names parsed from headers, so genus synonyms are not merged; no TaxIDs; s=1000 gives identities in steps of 0.001. Superseded by `mycobacteriaceae`. |
 | `listeria` | 2025-02-18 | All NCBI *Listeria* assemblies, dereplicated as above. | Names parsed from headers; no TaxIDs. Run `--check`. |
 | `progenomes3` | 2023-03 | proGenomes v3 representative genomes, sketched from the proGenomes fasta. | Header format differs from NCBI's; names come from the sidecar generated on first use, check them with `--check`. |
 | `refseq_bacteria` | 2023-01-19 | RefSeq bacteria, dereplicated at 0.01. | Large (653 MB); three years old. |
