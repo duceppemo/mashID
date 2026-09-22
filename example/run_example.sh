@@ -9,9 +9,10 @@ mashID -i "$here/reads" -o "$out" -d "$here/db/example.msh" -t 2 -p 2
 
 if [[ "${1:-}" == "--update-expected" ]]; then
     mkdir -p "$here/expected"
-    cp "$out"/summary_mashID.tsv "$out"/*_mashID.tsv "$here/expected/"
+    cp "$out"/summary_mashID.tsv "$out"/summary_mashID_mqc.tsv "$out"/*_mashID.tsv "$here/expected/"
     echo "Expected output updated in $here/expected"
-elif diff "$here/expected/summary_mashID.tsv" "$out/summary_mashID.tsv"; then
+elif diff "$here/expected/summary_mashID.tsv" "$out/summary_mashID.tsv" \
+        && diff "$here/expected/summary_mashID_mqc.tsv" "$out/summary_mashID_mqc.tsv"; then
     echo "OK: results match $here/expected/summary_mashID.tsv"
 else
     echo "MISMATCH: compare $out with $here/expected" >&2

@@ -17,7 +17,10 @@ mashID -i example/reads -o example_out -d example/db/example.msh
 | `unknown` | `unknown.fasta` | A sequence matching nothing in the database. |
 
 `db/example.msh` holds sketches (k=21, s=1000) of three 120 kb genomes and `db/example.metadata.tsv`
-their names. `expected/` holds the tables mashID produces; `run_example.sh` compares them.
+their names. `expected/` holds the summary, the MultiQC table and the per-sample tables mashID
+produces; `run_example.sh` compares the summary and MultiQC table. The JSON summary and
+`mashID_run.json` are produced too but not compared, since they contain absolute paths, timestamps
+and the host name.
 
 `make_example.py` regenerates everything deterministically (needs `mash` and mashID installed):
 

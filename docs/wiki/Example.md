@@ -11,7 +11,7 @@ bash example/run_example.sh
 ```
 
 `run_example.sh` runs mashID on `example/reads` against `example/db/example.msh` and compares the
-summary with `example/expected/summary_mashID.tsv`, printing `OK` on a match. To run it by hand:
+summary and the MultiQC table with `example/expected/`, printing `OK` on a match. To run it by hand:
 
 ```bash
 mashID -i example/reads -o example_out -d example/db/example.msh
@@ -59,6 +59,33 @@ Rank  Identity  Shared_Hashes  Accession        Identification
 
 `TaxID` is `NA` because the names were parsed from headers; a database built with `--metadata` or
 `--assembly-report` fills it in (see [Databases](Databases#the-metadata-sidecar)).
+
+## Files produced
+
+| File | Compared with `expected/` |
+| --- | --- |
+| `summary_mashID.tsv` | yes |
+| `summary_mashID_mqc.tsv` | yes; drop the output directory into `multiqc` to see it in a report |
+| `<sample>_mashID.tsv` (four files) | yes, by the CI test |
+| `summary_mashID.json` | no: contains the absolute paths of the input files |
+| `mashID_run.json` | no: contains paths, timestamps, the host name and the database MD5 |
+
+The MultiQC table for the example:
+
+```
+# id: mashid
+# section_name: mashID
+# description: Species identification with Mash (mashID 0.2.2). Identity is the Mash containment estimate of the best reference; Est_Depth is bases / reference length.
+# plot_type: table
+# pconfig:
+#     id: mashid_table
+#     namespace: mashID
+Sample	Identification	Identity	Est_Depth	Median_Multiplicity	Sequences	Bases	Note
+alpha	Exemplaria alpha	0.999952	10.0	8	8000	1200000	
+delta_assembly	Fictivibrio delta	0.999952	NA	1	2	120000	
+mixed_beta_delta	Exemplaria beta subsp. gamma	0.999857	13.8	6	11000	1650000	Possible mixture with: Fictivibrio delta
+unknown	No significant hit in database	NA	NA	NA	1	30000	
+```
 
 ## Things to try
 

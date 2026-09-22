@@ -1,0 +1,12 @@
+# id: mashid
+# section_name: mashID
+# description: Species identification with Mash (mashID 0.2.2). Identity is the Mash containment estimate of the best reference; Est_Depth is bases / reference length.
+# plot_type: table
+# pconfig:
+#     id: mashid_table
+#     namespace: mashID
+Sample	Identification	Identity	Est_Depth	Median_Multiplicity	Sequences	Bases	Note
+alpha	Exemplaria alpha	0.999952	10.0	8	8000	1200000	
+delta_assembly	Fictivibrio delta	0.999952	NA	1	2	120000	
+mixed_beta_delta	Exemplaria beta subsp. gamma	0.999857	13.8	6	11000	1650000	Possible mixture with: Fictivibrio delta
+unknown	No significant hit in database	NA	NA	NA	1	30000	

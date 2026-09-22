@@ -31,6 +31,9 @@ def test_example_matches_expected(tmp_path):
     for row in expected:
         assert _read_tsv(out / f"{row['Sample']}_mashID.tsv") == \
             _read_tsv(EXAMPLE / "expected" / f"{row['Sample']}_mashID.tsv")
+    assert (out / "summary_mashID_mqc.tsv").read_text() == (EXAMPLE / "expected" / "summary_mashID_mqc.tsv").read_text()
+    # produced but not compared: they hold absolute paths, timestamps and the host name
+    assert (out / "summary_mashID.json").is_file() and (out / "mashID_run.json").is_file()
     # the example database ships with its sidecar, so nothing is rewritten inside the repository
     assert sidecar.read_bytes() == sidecar_before
 
