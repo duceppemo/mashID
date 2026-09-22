@@ -1,0 +1,67 @@
+# Changelog
+
+## 0.2.0 (2026-09-21)
+
+### Breaking changes
+- The 2022 Mycobacteria database is no longer bundled. Databases are downloaded on demand with
+  `mashID_download_db` (MD5-verified) into `$MASHID_DB_DIR` or `~/.local/share/mashID/db`; the
+  default database is the 2025-02-20 Mycobacteriaceae one, which supersedes the bundled file.
+  `-d` accepts a path or a database name.
+- `summary_mashID.tsv` replaces `topID.tsv` (the name the README always documented).
+- Column names no longer contain `%` or `-`: `Sequences`, `Bases`, `Identity`, `Shared_Hashes`,
+  `Median_Multiplicity`, `P_Value`, `Accession`, `TaxID`, `Identification`, `Note`. The old
+  `%-Identity` column was a fraction, not a percentage. Per-sample tables gain `TaxID`,
+  `Identification` and `Description` columns.
+- Sample names are derived by stripping the extension and Illumina read designations
+  (`_S1_L001_R1_001`, `_R1`, `_1`), instead of everything after the first underscore.
+  `isolate_A_R1.fq.gz` is now sample `isolate_A` and no longer collides with `isolate_B_R1.fq.gz`.
+- `-m/--memory` is accepted but ignored (BBMap is no longer used).
+- Installable package: `pip install .` provides the `mashID` and `make_mashID_db` commands.
+  `python mashID.py` and `python make_mashID_db.py` keep working.
+
+### Dependencies
+- Dropped pandas, psutil, BBMap and `pkg_resources`. Only Python ≥ 3.10 and Mash 2.3 are required.
+  Reads/bases are counted in pure Python (optionally accelerated by `python-isal`).
+
+### Fixes
+- Paired-end files are passed to `mash screen` directly instead of being concatenated into a copy
+  under `<output>/tmp`, which was then deleted with `shutil.rmtree` (destroying any pre-existing
+  `tmp` folder in the output directory).
+- Argument validation was ineffective (`if 0 < x > 1` never triggers for negatives; thread/memory
+  checks returned values that were discarded). Ranges are now validated by argparse.
+- `mash` errors were silenced (`stderr` discarded, exit code ignored) and surfaced as
+  "No significant hit". Failures now abort with Mash's error message; a missing `mash` executable or
+  database is reported up front.
+- `-p` larger than `-t` produced `-p 0` for Mash; threads per sample are now at least 1.
+- Organism-name parsing no longer crashes on short or unusual headers and handles `Candidatus`,
+  bracketed genera, `sp.`, serovars, multiple infraspecific ranks, and headers without an accession.
+  The former check for `sub` matched unrelated words such as "substrain".
+- Accessions are derived correctly from `.fna.gz` references.
+- Read counts from BBMap `stats.sh` were slightly low on some fastq files; counts now match `awk`.
+- `make_mashID_db`: k-mer size range check was inverted; silent failures now raise; a `.msh` suffix
+  given in `-p` no longer yields `name.msh.msh`; the temporary file list is no longer left in the
+  output directory; input may be a directory or a list file.
+
+### Security
+- The NCBI API key that was hard-coded in `mashID_Mycobactriaceae_DB.sh` has been removed; the
+  rewritten `scripts/build_mycobacteriaceae_db.sh` reads `NCBI_API_KEY` from the environment.
+  The old key remains in git history and must be regenerated at NCBI.
+
+### Added
+- `Note` column flagging possible mixtures, ambiguous calls and low coverage
+  (`--ambiguity-margin`).
+- Hits to references shorter than `--min-ref-length` (100 kb) are ignored, and `make_mashID_db`
+  excludes such references (`--min-length`). Partial records otherwise become false top hits.
+- `--max-reads N`: stream only the first N reads of each fastq sample to `mash screen` for quick
+  checks on large runs.
+- Metadata sidecar `<db>.metadata.tsv` (accession, organism, TaxID) written by `make_mashID_db` from
+  `--metadata` tables or NCBI `--assembly-report` files, or parsed headers, and including reference
+  lengths; `--annotate` adds one to an existing database and `mashID` generates it on first use.
+  `mashID` uses it (or `--db-metadata`) instead of parsing headers.
+- `mashID_download_db` and a registry of the Figshare databases with sizes and checksums.
+- `--no-winner-take-all`, `--skip-stats`, `--debug` options.
+- Test suite (`pytest`), `ruff` lint, GitHub Actions CI, bioconda recipe template, `pyproject.toml`,
+  `environment.yml`, `.gitignore`.
+
+## 0.1.1
+- Previous release.

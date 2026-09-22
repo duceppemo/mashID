@@ -1,0 +1,63 @@
+import json
+
+import pytest
+
+from mashid import MashIDError
+from mashid.metadata import DbEntry, read_metadata, read_ncbi_assembly_report, sidecar_path, write_metadata
+
+
+def test_sidecar_path(tmp_path):
+    assert sidecar_path(tmp_path / "foo.msh") == tmp_path / "foo.metadata.tsv"
+    assert sidecar_path(tmp_path / "foo") == tmp_path / "foo.metadata.tsv"
+
+
+def test_roundtrip(tmp_path):
+    p = tmp_path / "db.metadata.tsv"
+    entries = [DbEntry("GCF_1.1", "Genusa one", "10", 4_000_000, 1000, "/x/GCF_1.1.fna", "desc"),
+               DbEntry("GCF_2.1", "Genusb two")]
+    write_metadata(p, entries)
+    back = read_metadata(p)
+    assert back["GCF_1.1"].organism == "Genusa one" and back["GCF_1.1"].taxid == "10"
+    assert back["GCF_1.1"].length == 4_000_000 and back["GCF_1.1"].hashes == 1000
+    assert back["GCF_1.1"].description == "desc" and back["GCF_2.1"].taxid == "NA"
+    assert back["GCF_2.1"].length is None and back["GCF_2.1"].hashes is None
+
+
+def test_read_user_table_flexible_headers(tmp_path):
+    p = tmp_path / "meta.csv"
+    p.write_text("﻿assembly accession,organism name,taxid\nGCF_1.1,Genusa one,10\n,skipped,\n")
+    back = read_metadata(p)
+    assert list(back) == ["GCF_1.1"] and back["GCF_1.1"].taxid == "10"
+    p.write_text("foo\tbar\nx\ty\n")
+    with pytest.raises(MashIDError, match="expected columns"):
+        read_metadata(p)
+    with pytest.raises(MashIDError, match="not found"):
+        read_metadata(tmp_path / "nope.tsv")
+
+
+def test_read_ncbi_assembly_report(tmp_path):
+    p = tmp_path / "assembly_data_report.jsonl"
+    rows = [
+        {"accession": "GCF_000195955.2", "pairedAccession": "GCA_000195955.2",
+         "organism": {"organismName": "Mycobacterium tuberculosis H37Rv", "taxId": 83332}},
+        {"accession": "GCF_000000002.1", "organism": {"organismName": "Genusb two"}},
+    ]
+    p.write_text("\n".join(json.dumps(r) for r in rows) + "\n\n")
+    back = read_ncbi_assembly_report(p)
+    assert back["GCF_000195955.2"] == ("Mycobacterium tuberculosis H37Rv", "83332")
+    assert back["GCA_000195955.2"] == ("Mycobacterium tuberculosis H37Rv", "83332")
+    assert back["GCF_000000002.1"] == ("Genusb two", "NA")
+    p.write_text("{not json\n")
+    with pytest.raises(MashIDError, match="not valid JSON"):
+        read_ncbi_assembly_report(p)
+
+
+def test_entries_from_sketches():
+    from mashid.mash import SketchInfo
+    from mashid.metadata import entries_from_sketches
+    sketches = [SketchInfo(1000, 5_000_000, "/db/GCF_1.1.fna", "NZ_1 Genusa one strain x"),
+                SketchInfo(947, 900, "/db/GCF_2.1.fna", "NZ_2 Genusb two")]
+    entries, unannotated = entries_from_sketches(sketches, {"GCF_1.1": ("Curated one", "11")})
+    assert unannotated == 1
+    assert entries[0].organism == "Curated one" and entries[0].taxid == "11" and entries[0].length == 5_000_000
+    assert entries[1].organism == "Genusb two" and entries[1].hashes == 947 and entries[1].description == "NZ_2 Genusb two"

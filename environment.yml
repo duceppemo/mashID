@@ -1,0 +1,11 @@
+# conda env create -f environment.yml && conda activate mashID && pip install .
+name: mashID
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python>=3.10
+  - mash=2.3
+  - gsl==2.7      # bioconda mash 2.3 links against libgsl.so.25; newer GSL builds break it
+  - python-isal   # optional: faster gzip decompression when counting reads
+  - pip
