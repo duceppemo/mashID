@@ -17,9 +17,7 @@
   -->
   <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10+">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/duceppemo/mashID" alt="License: MIT"></a>
-  <!-- Enable once a Zenodo DOI exists for the release:
-  <a href="https://doi.org/10.5281/zenodo.XXXXXXX"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXX.svg" alt="DOI"></a>
-  -->
+  <a href="https://doi.org/10.5281/zenodo.22888109"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.22888109.svg" alt="DOI"></a>
 </p>
 
 mashID screens each sample against a Mash sketch database, reports the best-matching organisms with
@@ -66,7 +64,7 @@ maintained in [`docs/wiki`](docs/wiki):
 
 If mashID is useful in your work, please cite it (see [`CITATION.cff`](CITATION.cff)):
 
-> Duceppe, M.-O. (2026). mashID: species identification from genome assemblies and raw reads using Mash (v0.2.1). https://github.com/duceppemo/mashID
+> Duceppe, M.-O. (2026). mashID: species identification from genome assemblies and raw reads using Mash (v0.2.1). Zenodo. https://doi.org/10.5281/zenodo.22888109
 
 and Mash: Ondov et al. (2016) *Mash: fast genome and metagenome distance estimation using MinHash*, Genome Biology 17:132. https://doi.org/10.1186/s13059-016-0997-x
 

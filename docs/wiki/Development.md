@@ -37,7 +37,9 @@ on Python 3.10 and 3.12, `ruff check`, `pytest`, and the CLIs' `--help`.
 1. Update `__version__` in `mashid/__init__.py` and add a section to `CHANGELOG.md`.
 2. Commit, then tag: `git tag -a vX.Y.Z -m "mashID X.Y.Z" && git push origin master vX.Y.Z`.
 3. `.github/workflows/release.yml` builds the wheel and creates the GitHub release with the
-   changelog section as notes.
+   changelog section as notes. Zenodo archives the release automatically and mints a version DOI
+   under the concept DOI [10.5281/zenodo.22888109](https://doi.org/10.5281/zenodo.22888109); put the
+   new version DOI in `CITATION.cff` (`doi:` and `identifiers`) in the next commit.
 4. Update `recipe/meta.yaml`: `version`, `sha256` of the new tag's tarball
    (`curl -sL https://github.com/duceppemo/mashID/archive/refs/tags/vX.Y.Z.tar.gz | sha256sum`), and
    `number: 0`. Copy `recipe/` to `bioconda-recipes/recipes/mashid` and open a pull request; once its

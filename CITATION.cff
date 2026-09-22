@@ -7,6 +7,14 @@ authors:
     given-names: Marc-Olivier
 version: 0.2.1
 date-released: "2026-09-22"
+doi: 10.5281/zenodo.22888110
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.22888109
+    description: "Concept DOI: resolves to the latest version"
+  - type: doi
+    value: 10.5281/zenodo.22888110
+    description: "Version DOI for 0.2.1"
 license: MIT
 repository-code: "https://github.com/duceppemo/mashID"
 url: "https://github.com/duceppemo/mashID"
