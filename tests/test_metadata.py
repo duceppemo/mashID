@@ -47,6 +47,11 @@ def test_read_ncbi_assembly_report(tmp_path):
     assert back["GCF_000195955.2"] == ("Mycobacterium tuberculosis", "83332")
     assert back["GCA_000195955.2"] == ("Mycobacterium tuberculosis", "83332")
     assert back["GCF_000000002.1"] == ("Genusb two", "NA")
+    # `datasets summary ... --as-json-lines` uses snake_case keys
+    p.write_text(json.dumps({"accession": "GCF_000000005.1", "paired_accession": "GCA_000000005.1",
+                             "organism": {"organism_name": "Salmonella bongori", "tax_id": 54736}}) + "\n")
+    back = read_ncbi_assembly_report(p)
+    assert back["GCF_000000005.1"] == ("Salmonella bongori", "54736") and "GCA_000000005.1" in back
     p.write_text("{not json\n")
     with pytest.raises(MashIDError, match="not valid JSON"):
         read_ncbi_assembly_report(p)

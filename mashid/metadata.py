@@ -116,8 +116,21 @@ def write_metadata(path: Path, entries: list[DbEntry]) -> None:
                              e.source_file, e.description])
 
 
+def _get(record: dict, *keys: str):
+    """First present key among camelCase/snake_case variants."""
+    for k in keys:
+        if k in record and record[k] not in (None, ""):
+            return record[k]
+    return None
+
+
 def read_ncbi_assembly_report(path: Path) -> dict[str, tuple[str, str]]:
-    """Parse NCBI ``datasets`` ``assembly_data_report.jsonl`` into {accession: (organism, taxid)}."""
+    """Parse NCBI Datasets JSON lines into {accession: (organism, taxid)}.
+
+    Accepts both ``assembly_data_report.jsonl`` from a download archive (camelCase keys:
+    ``organism.organismName``, ``organism.taxId``, ``pairedAccession``) and the output of
+    ``datasets summary genome ... --as-json-lines`` (snake_case: ``organism_name``, ``tax_id``,
+    ``paired_accession``)."""
     path = Path(path)
     if not path.is_file():
         raise MashIDError(f"Assembly report not found: {path}")
@@ -131,14 +144,16 @@ def read_ncbi_assembly_report(path: Path) -> dict[str, tuple[str, str]]:
                 record = json.loads(line)
             except json.JSONDecodeError as exc:
                 raise MashIDError(f"{path}: line {n} is not valid JSON: {exc}") from exc
-            acc = record.get("accession") or record.get("assemblyInfo", {}).get("assemblyAccession")
+            info = record.get("assemblyInfo") or record.get("assembly_info") or {}
+            acc = _get(record, "accession", "current_accession") or _get(info, "assemblyAccession",
+                                                                            "assembly_accession")
             organism = record.get("organism", {}) or {}
-            name = normalise_organism_name(organism.get("organismName") or NA)
-            taxid = str(organism.get("taxId") or NA)
+            name = normalise_organism_name(_get(organism, "organismName", "organism_name") or NA)
+            taxid = str(_get(organism, "taxId", "tax_id") or NA)
             if acc:
                 result[acc] = (name, taxid)
                 # Also register the paired accession (GCF <-> GCA) so either naming resolves.
-                paired = record.get("pairedAccession")
+                paired = _get(record, "pairedAccession", "paired_accession")
                 if paired:
                     result.setdefault(paired, (name, taxid))
     return result
