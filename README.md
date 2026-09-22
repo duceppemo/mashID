@@ -56,6 +56,7 @@ maintained in [`docs/wiki`](docs/wiki):
 
 - [Installation](https://github.com/duceppemo/mashID/wiki/Installation) — conda, pip, troubleshooting
 - [Usage](https://github.com/duceppemo/mashID/wiki/Usage) — options, input files, sample naming, quick screening of large runs
+- [Example](https://github.com/duceppemo/mashID/wiki/Example) — the bundled dataset and how to read its results
 - [Outputs](https://github.com/duceppemo/mashID/wiki/Outputs) — columns, the `Note` flags, limits of Mash identification
 - [Databases](https://github.com/duceppemo/mashID/wiki/Databases) — pre-built databases, building your own, metadata sidecar
 - [Development](https://github.com/duceppemo/mashID/wiki/Development) — tests, CI, releases, bioconda

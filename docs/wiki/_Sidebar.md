@@ -2,6 +2,7 @@
 
 - [Installation](Installation)
 - [Usage](Usage)
+- [Example](Example)
 - [Outputs](Outputs)
 - [Databases](Databases)
 - [Development](Development)

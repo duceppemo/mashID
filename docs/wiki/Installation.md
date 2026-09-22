@@ -43,7 +43,8 @@ bash example/run_example.sh
 ```
 
 It screens four samples (paired-end reads, a mixed culture, an assembly, and an unrelated sequence)
-and reports `OK` when the summary matches `example/expected/summary_mashID.tsv`.
+and reports `OK` when the summary matches `example/expected/summary_mashID.tsv`. The [Example](Example)
+page walks through the results.
 
 ## Databases
 

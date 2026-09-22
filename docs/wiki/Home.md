@@ -14,6 +14,7 @@ Ion Torrent, Nanopore and PacBio reads, and with assemblies; inputs may be gzipp
 
 - [Installation](Installation)
 - [Usage](Usage)
+- [Example](Example)
 - [Outputs](Outputs)
 - [Databases](Databases)
 - [Development](Development)

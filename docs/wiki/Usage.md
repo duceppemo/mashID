@@ -44,6 +44,8 @@ usage: mashID [-h] -i PATH -o DIR [-d FILE.msh|NAME] [--db-metadata FILE.tsv]
 
 ## Examples
 
+For a runnable worked example with its expected output, see [Example](Example).
+
 ```bash
 # Default (downloaded) Mycobacteriaceae database, 4 samples at a time
 mashID -i /data/run42/fastq -o /data/run42/mashID -t 16 -p 4
