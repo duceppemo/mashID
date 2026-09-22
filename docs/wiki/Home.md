@@ -35,6 +35,8 @@ mashID -i /path/to/reads -o results
 
 ## How it works
 
+<p align="center"><img src="https://raw.githubusercontent.com/duceppemo/mashID/master/docs/images/workflow_v3.svg" alt="mashID workflow" width="760"></p>
+
 1. Input files are grouped into samples by name; R1/R2 pairs and multi-lane files belong to one sample.
 2. Reads and bases are counted (pure Python, optionally accelerated by `python-isal`).
 3. `mash screen -w` estimates, for every reference in the database, how much of its sketch is
