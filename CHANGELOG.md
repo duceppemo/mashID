@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.4 (2026-09-22)
+
+### Fixed
+- The MultiQC table's header no longer embeds the mashID version; the example's expected table went
+  stale on every version bump, which made the 0.2.3 tarball's example test fail.
+
 ## 0.2.3 (2026-09-22)
 
 ### Changed
