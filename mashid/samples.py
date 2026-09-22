@@ -76,6 +76,8 @@ def sample_name_from_file(path: Path | str) -> str:
 def find_sequence_files(input_path: Path) -> list[Path]:
     """Return sequence files found at ``input_path`` (a file, or a directory searched recursively)."""
     input_path = Path(input_path)
+    if input_path.is_symlink() and not input_path.exists():
+        raise MashIDError(f"Input is a link to a missing file: {input_path} -> {os.readlink(input_path)}")
     if input_path.is_file():
         if not is_sequence_file(input_path):
             raise MashIDError(
@@ -87,6 +89,7 @@ def find_sequence_files(input_path: Path) -> list[Path]:
         raise MashIDError(f"Input path does not exist: {input_path}")
 
     files: list[Path] = []
+    broken: list[Path] = []
     visited: set[Path] = set()
     for root, dirs, filenames in os.walk(input_path, followlinks=True):
         visited.add(Path(root).resolve())
@@ -97,7 +100,15 @@ def find_sequence_files(input_path: Path) -> list[Path]:
         for filename in sorted(filenames):
             if filename.startswith(".") or not is_sequence_file(filename):
                 continue
-            files.append((Path(root) / filename).resolve())
+            path = Path(root) / filename
+            if not path.exists():  # a symbolic link whose target is gone
+                broken.append(path)
+                continue
+            files.append(path.resolve())
+    if broken:
+        listed = "\n  ".join(f"{p} -> {os.readlink(p)}" for p in broken[:10])
+        more = f"\n  ... and {len(broken) - 10} more" if len(broken) > 10 else ""
+        raise MashIDError(f"{len(broken)} sequence file link(s) point to missing files:\n  {listed}{more}")
     if not files:
         raise MashIDError(
             f"No sequence files found in {input_path}. Accepted extensions: {', '.join(SEQ_EXTENSIONS)}"

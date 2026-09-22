@@ -94,6 +94,15 @@ def test_errors(tmp_path):
         find_sequence_files(tmp_path / "notes.txt")
 
 
+def test_dangling_symlinks_are_reported(tmp_path):
+    _touch(tmp_path / "good.fastq")
+    (tmp_path / "gone_R1.fastq.gz").symlink_to(tmp_path / "missing" / "gone_R1.fastq.gz")
+    with pytest.raises(MashIDError, match=r"1 sequence file link\(s\) point to missing files"):
+        find_sequence_files(tmp_path)
+    with pytest.raises(MashIDError, match="link to a missing file"):
+        find_sequence_files(tmp_path / "gone_R1.fastq.gz")
+
+
 def test_symlink_cycle_does_not_loop(tmp_path):
     _touch(tmp_path / "a" / "S1.fastq")
     (tmp_path / "a" / "loop").symlink_to(tmp_path, target_is_directory=True)

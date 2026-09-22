@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Symbolic links to missing files in the input are reported up front with their targets, instead of a
+  raw Mash error after read counting.
+
+### Added
+- `ASSEMBLY_SOURCE` option (GenBank or RefSeq) in the database build script.
+
 ## 0.2.4 (2026-09-22)
 
 ### Fixed
