@@ -133,7 +133,7 @@ def read_ncbi_assembly_report(path: Path) -> dict[str, tuple[str, str]]:
                 raise MashIDError(f"{path}: line {n} is not valid JSON: {exc}") from exc
             acc = record.get("accession") or record.get("assemblyInfo", {}).get("assemblyAccession")
             organism = record.get("organism", {}) or {}
-            name = organism.get("organismName") or NA
+            name = normalise_organism_name(organism.get("organismName") or NA)
             taxid = str(organism.get("taxId") or NA)
             if acc:
                 result[acc] = (name, taxid)
@@ -142,6 +142,18 @@ def read_ncbi_assembly_report(path: Path) -> dict[str, tuple[str, str]]:
                 if paired:
                     result.setdefault(paired, (name, taxid))
     return result
+
+
+def normalise_organism_name(name: str) -> str:
+    """Strip strain-level text from an NCBI organism name.
+
+    "Mycobacterium tuberculosis variant bovis BCG str. Sweden" -> "Mycobacterium tuberculosis variant bovis"
+    "Mycobacterium sp. JS623" is kept as is. Names that do not parse are returned unchanged.
+    """
+    if not name or name == NA:
+        return NA
+    parsed = organism_from_comment(name, fallback="")
+    return parsed or name
 
 
 def lookup(entries: dict[str, DbEntry] | None, accession: str) -> DbEntry | None:
