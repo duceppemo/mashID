@@ -11,6 +11,9 @@
   renaming samples through links had no effect.
 
 ### Added
+- `escherichia` database: 4503 *Escherichia* and *Shigella* references from RefSeq, s=10000, NCBI
+  TaxIDs, [Figshare](https://doi.org/10.6084/m9.figshare.33969760), with metadata sidecar; 96.4% held-out
+  species concordance. `scripts/validate_db_heldout.py` measures that for any taxon build.
 - `salmonella` database: 1442 *Salmonella* references from RefSeq covering all subspecies, s=10000,
   NCBI TaxIDs, [Figshare](https://doi.org/10.6084/m9.figshare.33968917), with metadata sidecar.
 - `progenomes4` database: proGenomes 4 representatives (32,887 genomes, s=2000, NCBI names and

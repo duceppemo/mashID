@@ -102,6 +102,21 @@ REGISTRY: dict[str, RemoteDatabase] = {
             metadata_size=433_228,
         ),
         RemoteDatabase(
+            name="escherichia",
+            filename="escherichia_shigella_2026-09-22.msh",
+            url="https://ndownloader.figshare.com/files/69247507",
+            md5="0a8a7b18f9dec77ce8578116d115d18b",
+            size=361_633_792,
+            description="Escherichia and Shigella (NCBI taxa 561, 620): 57,146 RefSeq assemblies as of "
+                        "2026-09-22, dereplicated to 4503 references (E. coli 3316) with NCBI TaxIDs. k=21, "
+                        "s=10000. Species level; Shigella species other than sonnei/flexneri are not reliably "
+                        "separable.",
+            doi="10.6084/m9.figshare.33969760.v1",
+            metadata_url="https://ndownloader.figshare.com/files/69247504",
+            metadata_md5="9945ee3f12cf01162391a5f8ff6b6db5",
+            metadata_size=1_111_407,
+        ),
+        RemoteDatabase(
             name="progenomes4",
             filename="progenomes4_2026-09-22.msh",
             url="https://ndownloader.figshare.com/files/69242068",
