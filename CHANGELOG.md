@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.8 (2026-09-23)
 
 ### Fixed
 - A reference header with a non-UTF-8 byte crashed mashID with `UnicodeDecodeError`; Mash output is now

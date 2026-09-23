@@ -32,7 +32,7 @@ screened together.
 ```bash
 conda create -n mashID -c conda-forge -c bioconda python=3.12 mash=2.3 python-isal
 conda activate mashID
-pip install https://github.com/duceppemo/mashID/archive/refs/tags/v0.2.7.tar.gz
+pip install https://github.com/duceppemo/mashID/archive/refs/tags/v0.2.8.tar.gz
 
 mashID_download_db mycobacteriaceae          # 284 MB, MD5-verified
 mashID -i /path/to/fastq_or_fasta -o results
@@ -76,7 +76,7 @@ maintained in [`docs/wiki`](docs/wiki):
 
 If mashID is useful in your work, please cite it (see [`CITATION.cff`](CITATION.cff)):
 
-> Duceppe, M.-O. (2026). mashID: species identification from genome assemblies and raw reads using Mash (v0.2.7). Zenodo. https://doi.org/10.5281/zenodo.22888109
+> Duceppe, M.-O. (2026). mashID: species identification from genome assemblies and raw reads using Mash (v0.2.8). Zenodo. https://doi.org/10.5281/zenodo.22888109
 
 and Mash: Ondov et al. (2016) *Mash: fast genome and metagenome distance estimation using MinHash*, Genome Biology 17:132. https://doi.org/10.1186/s13059-016-0997-x
 
