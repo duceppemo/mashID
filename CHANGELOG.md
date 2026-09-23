@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.6 (2026-09-22)
 
 ### Changed
 - `scripts/build_mycobacteriaceae_db.sh` is now `scripts/build_taxon_db.sh`: it builds a database for any
