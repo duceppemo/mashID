@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.7 (2026-09-22)
 
 ### Added
 - `brucella` database: 387 *Brucella* references (29 species, former *Ochrobactrum* included) from
