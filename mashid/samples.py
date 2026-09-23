@@ -135,6 +135,13 @@ def group_samples(files: list[Path]) -> list[Sample]:
                 f"Sample '{name}' mixes fasta and fastq files; rename them so they do not share a sample name: "
                 + ", ".join(str(p) for p in paths)
             )
+        basenames = [p.name for p in paths]
+        if len(set(basenames)) != len(basenames):
+            raise MashIDError(
+                f"Sample '{name}' groups files with the same name from different directories, which is "
+                "almost certainly two different samples: " + ", ".join(str(p) for p in paths)
+                + ". Rename them or use --sample-sheet."
+            )
         sample = Sample(name=name, files=paths, seq_type=types.pop())
         if len(paths) > 2:
             msg = f"{len(paths)} files grouped under sample '{name}'; all will be screened together"
@@ -148,10 +155,12 @@ def discover_samples(input_path: Path) -> list[Sample]:
     return group_samples(find_sequence_files(input_path))
 
 
-def read_sample_sheet(path: Path) -> tuple[list[Sample], list[str]]:
+def read_sample_sheet(path: Path, reserved: set[str] | None = None) -> tuple[list[Sample], list[str]]:
     """Read a TSV/CSV sample sheet: columns ``sample`` and ``file`` (or ``files``), one row per file or
     per sample with files separated by ';' or ','. Relative paths are resolved against the sheet's
-    directory. Other columns are kept on each sample (``extra``) and returned as ``extra_columns``.
+    directory. Other columns are kept on each sample (``extra``) and returned as ``extra_columns``;
+    a column whose name is in ``reserved`` (an output column) is renamed ``Sheet_<name>`` so it can
+    never overwrite a result.
     """
     path = Path(path)
     if not path.is_file():
@@ -168,6 +177,12 @@ def read_sample_sheet(path: Path) -> tuple[list[Sample], list[str]]:
     if not sample_col or not file_col:
         raise MashIDError(f"{path}: expected columns 'sample' and 'file' (or 'files'); found {reader.fieldnames}")
     extra_columns = [c for c in (reader.fieldnames or []) if c not in (sample_col, file_col)]
+    renamed: dict[str, str] = {}
+    for c in extra_columns:
+        if reserved and c in reserved:
+            renamed[c] = f"Sheet_{c}"
+            log.warning("Sample sheet column %r clashes with an output column; reported as %r", c, renamed[c])
+    extra_columns = [renamed.get(c, c) for c in extra_columns]
 
     grouped: dict[str, Sample] = {}
     for n, row in enumerate(reader, start=2):
@@ -181,7 +196,8 @@ def read_sample_sheet(path: Path) -> tuple[list[Sample], list[str]]:
             raise MashIDError(f"{path}: line {n} ({name}) lists no file")
         sample = grouped.get(name)
         if sample is None:
-            extra = {c: (row.get(c) or "").strip() for c in extra_columns}
+            extra = {renamed.get(c, c): (row.get(c) or "").strip() for c in (reader.fieldnames or [])
+                     if c not in (sample_col, file_col)}
             sample = Sample(name=name, files=[], seq_type="", extra=extra)
             grouped[name] = sample
         for f in files:

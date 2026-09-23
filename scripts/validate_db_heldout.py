@@ -96,7 +96,12 @@ def main() -> int:
     out = args.out or (tmp / "out")
     cmd = ["mashID", "-i", str(inp), "-o", str(out), "-d", str(args.database), "-t", str(args.threads),
            "-p", str(max(1, args.threads // 4))]
-    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    proc = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True,
+                          encoding="utf-8", errors="replace")
+    if proc.returncode != 0:
+        print(proc.stderr[-2000:], file=sys.stderr)
+        print(f"mashID failed with exit code {proc.returncode}", file=sys.stderr)
+        return 1
 
     rows = read_tsv(out / "summary_mashID.tsv")
     per: dict[str, list[int]] = collections.defaultdict(lambda: [0, 0, 0])  # correct, total, noted

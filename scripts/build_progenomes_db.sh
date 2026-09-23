@@ -2,7 +2,7 @@
 # Build a mashID database from proGenomes representative genomes (https://progenomes.embl.de).
 #
 # Usage:  build_progenomes_db.sh <work_dir> [db_name] [url]
-# Env:    NCBI_API_KEY   optional; used when fetching TaxIDs from NCBI
+# Env:    NCBI_API_KEY   optional; read by `datasets` from the environment when fetching TaxIDs
 #         THREADS        default: all CPUs
 #         SKETCH_SIZE    default 10000
 # Needs on PATH: curl, zcat, datasets (ncbi-datasets-cli), mash, make_mashID_db, python3.
@@ -21,8 +21,6 @@ url="${3:-https://progenomes.embl.de/data/repGenomes/pg4_genomes_representatives
 threads="${THREADS:-$(nproc)}"
 sketch_size="${SKETCH_SIZE:-10000}"
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-api=()
-[[ -n "${NCBI_API_KEY:-}" ]] && api=(--api-key "$NCBI_API_KEY")
 log() { echo "[$(date '+%F %T')] $*"; }
 
 for tool in curl zcat datasets mash make_mashID_db python3; do
@@ -47,7 +45,7 @@ log "   $(wc -l < genomes/accessions.txt) genomes"
 
 if [[ ! -s assembly_data_report.jsonl ]]; then
     log "3. Fetching organism names and TaxIDs from NCBI Datasets"
-    datasets summary genome accession --inputfile genomes/accessions.txt --as-json-lines "${api[@]}" \
+    datasets summary genome accession --inputfile genomes/accessions.txt --as-json-lines \
         > assembly_data_report.jsonl
 fi
 log "   $(wc -l < assembly_data_report.jsonl) assembly records"

@@ -7,6 +7,7 @@ import logging
 import os
 import sys
 import tempfile
+from collections import Counter
 from pathlib import Path
 
 from mashid import MashIDError, __version__
@@ -30,7 +31,10 @@ DEFAULT_MIN_LENGTH = 100_000  # bp; shorter "genomes" are usually partial record
 def list_fasta_files(input_path: Path) -> list[Path]:
     """Fasta files under a directory (recursive), or the paths listed in a text file (one per line)."""
     if input_path.is_file():
-        paths = [Path(line.strip()) for line in input_path.read_text().splitlines() if line.strip()]
+        # Relative entries are taken relative to the list file's directory, like a sample sheet.
+        paths = [Path(line.strip()) for line in input_path.read_text().splitlines()
+                 if line.strip() and not line.startswith("#")]
+        paths = [p if p.is_absolute() else input_path.parent / p for p in paths]
         missing = [p for p in paths if not p.is_file()]
         if missing:
             raise MashIDError("Listed file(s) not found: " + ", ".join(str(p) for p in missing[:5]))
@@ -100,7 +104,7 @@ def make_database(input_path: Path, output_dir: Path, prefix: str, threads: int,
         raise MashIDError("k-mer size must be between 1 and 32 (inclusive)")
     if sketch_size < 1:
         raise MashIDError("Sketch size must be at least 1")
-    if os.sep in prefix or prefix in ("", ".", ".."):
+    if os.sep in prefix or prefix in ("", ".", "..") or prefix.startswith("-"):
         raise MashIDError(f"Invalid database prefix: {prefix!r}")
     if prefix.endswith(".msh"):
         prefix = prefix[: -len(".msh")]
@@ -199,9 +203,9 @@ def check_database(database: Path, min_length: int = DEFAULT_MIN_LENGTH) -> list
                      "harmonise with --metadata so they count as one organism):")
         lines.extend(f"    {ep}: {', '.join(sorted(g))}" for ep, g in sorted(synonyms.items())[:20])
 
-    organisms = {e.organism for e in entries}
-    lines.append(f"  distinct organism names: {len(organisms)}")
-    singles = sum(1 for o in organisms if sum(1 for e in entries if e.organism == o) == 1)
+    per_organism = Counter(e.organism for e in entries)
+    lines.append(f"  distinct organism names: {len(per_organism)}")
+    singles = sum(1 for n in per_organism.values() if n == 1)
     lines.append(f"  organisms represented by a single reference: {singles}")
     lines.append("Result: " + (f"{problems} issue(s) found" if problems else "no issues found"))
     for line in lines:

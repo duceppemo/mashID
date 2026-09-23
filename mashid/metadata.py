@@ -60,9 +60,15 @@ def _normalise_header(fieldnames: list[str] | None) -> dict[str, str]:
 
 
 def _open_table(path: Path):
-    text = path.read_text(encoding="utf-8-sig")
-    delimiter = "\t" if "\t" in text.splitlines()[0] else ","
-    return csv.DictReader(text.splitlines(), delimiter=delimiter)
+    try:
+        text = path.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise MashIDError(f"{path} is not a UTF-8 text table: {exc}") from exc
+    lines = text.splitlines()
+    if not lines or not lines[0].strip():
+        raise MashIDError(f"{path} is empty")
+    delimiter = "\t" if "\t" in lines[0] else ","
+    return csv.DictReader(lines, delimiter=delimiter)
 
 
 def read_metadata(path: Path) -> dict[str, DbEntry]:

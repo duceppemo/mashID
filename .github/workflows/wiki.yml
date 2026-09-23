@@ -14,10 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Clone the wiki repository
-        run: |
-          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git" wiki \
-            || { echo "::error::The wiki has no pages yet. Create the first page at https://github.com/${{ github.repository }}/wiki, then re-run this workflow."; exit 1; }
+      - name: Check out the wiki repository
+        # The wiki repository exists only once a first page was created in the web UI.
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki
       - name: Copy pages
         run: rsync -a --delete --exclude .git docs/wiki/ wiki/
       - name: Commit and push

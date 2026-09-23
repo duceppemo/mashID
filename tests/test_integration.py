@@ -4,6 +4,7 @@ import csv
 import gzip
 import random
 import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -268,3 +269,37 @@ def test_metadata_is_built_on_the_fly_without_sidecar(db, tmp_path):
     assert (bare / "bare.metadata.tsv").is_file()  # written for next time
     row = _read_tsv(out / "summary_mashID.tsv")[0]
     assert row["Identification"] == "Genusb speciestwo subsp. three" and row["TaxID"] == "NA"
+
+
+def test_non_utf8_reference_header_does_not_crash(tmp_path):
+    """Mash echoes headers verbatim; a Latin-1 byte must not raise UnicodeDecodeError."""
+    from mashid.mash import find_mash, info_table
+    from mashid.metadata import entries_from_sketches
+    fasta = tmp_path / "latin1.fna"
+    fasta.write_bytes(b">NZ_X1.1 Bacillus subtilis strain caf\xe9 chromosome\n" + b"ACGT" * 300 + b"\n")
+    exe = find_mash()
+    subprocess.run([exe, "sketch", "-o", str(tmp_path / "latin1"), str(fasta)], check=True, capture_output=True)
+    rows = info_table(tmp_path / "latin1.msh", exe)
+    assert len(rows) == 1 and "Bacillus subtilis" in rows[0].comment
+    entries, _ = entries_from_sketches(rows)
+    assert entries[0].organism == "Bacillus subtilis"
+
+
+def test_sample_named_summary_is_rejected(db, tmp_path):
+    db_path, genomes = db
+    inp = tmp_path / "in"
+    inp.mkdir()
+    (inp / "summary.fasta").write_text(">c\n" + genomes["GCF_000000001.1"][:5000] + "\n")
+    assert mashid_main(["-i", str(inp), "-o", str(tmp_path / "out"), "-d", str(db_path), "-t", "1"]) == 1
+
+
+def test_makedb_list_file_relative_paths_and_bad_prefix(db, tmp_path):
+    db_path, genomes = db
+    gdir = tmp_path / "g"
+    gdir.mkdir()
+    (gdir / "GCF_000000001.1.fna").write_text(">NZ_1 Genusa one\n" + genomes["GCF_000000001.1"] + "\n")
+    listing = tmp_path / "list.txt"
+    listing.write_text("# relative to this file\ng/GCF_000000001.1.fna\n")
+    assert makedb_main(["-i", str(listing), "-o", str(tmp_path / "db"), "-p", "rel", "-s", "500"]) == 0
+    assert (tmp_path / "db" / "rel.msh").is_file()
+    assert makedb_main(["-i", str(listing), "-o", str(tmp_path / "db"), "--prefix=-bad", "-s", "500"]) == 1

@@ -196,7 +196,7 @@ def resolve_database(spec: str | os.PathLike | None, directory: Path | None = No
         )
     path = Path(spec).expanduser()
     if path.is_file():
-        return path
+        return path.absolute()  # never hand Mash a relative name that could look like an option
     name = str(spec)
     if name in REGISTRY:
         if is_installed(name, directory):

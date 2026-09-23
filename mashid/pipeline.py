@@ -271,6 +271,9 @@ def load_metadata(database: Path, override: Path | None, exe: str) -> dict[str, 
     if path.is_file():
         entries = read_metadata(path)
         log.info("Loaded metadata for %d reference(s) from %s", len(entries), path)
+        if path.stat().st_mtime < database.stat().st_mtime:
+            log.warning("%s is older than the database; if the database was rebuilt, refresh it with "
+                        "make_mashID_db --annotate", path.name)
         return entries
     log.info("No metadata sidecar found; reading reference names and lengths from the database")
     built, _ = entries_from_sketches(info_table(database, exe))
@@ -289,7 +292,10 @@ def _screen_sample(sample: Sample, settings: Settings, database: Path, metadata:
                   winner_take_all=settings.winner_take_all, exe=exe)
     if settings.max_reads and sample.seq_type == "fastq":
         subsampler = FastqSubsampler(sample.files, settings.max_reads)
-        hits = screen(database, None, stdin_chunks=subsampler.chunks(), **common)
+        try:
+            hits = screen(database, None, stdin_chunks=subsampler.chunks(), **common)
+        except (OSError, EOFError) as exc:  # unreadable or truncated input while streaming
+            raise MashIDError(f"Could not read the reads of sample '{sample.name}': {exc}") from exc
         sample.sequences, sample.bases = subsampler.sequences, subsampler.bases
     else:
         hits = screen(database, sample.files, **common)
@@ -417,7 +423,7 @@ def run(settings: Settings) -> int:
 
     extra_columns: list[str] = []
     if settings.sample_sheet is not None:
-        samples, extra_columns = read_sample_sheet(settings.sample_sheet)
+        samples, extra_columns = read_sample_sheet(settings.sample_sheet, reserved=set(SUMMARY_COLUMNS))
         log.info("Read %d sample(s) from %s", len(samples), settings.sample_sheet)
     elif settings.input is not None:
         samples = discover_samples(settings.input)
@@ -426,6 +432,9 @@ def run(settings: Settings) -> int:
         raise MashIDError("Give an input path (-i) or a sample sheet (--sample-sheet)")
     for s in samples:
         log.debug("  %s (%s): %s", s.name, s.seq_type, ", ".join(f.name for f in s.files))
+        if f"{s.name}_mashID.tsv" == SUMMARY_FILENAME:
+            raise MashIDError(f"A sample cannot be called '{s.name}': its output file would be the summary "
+                              f"file {SUMMARY_FILENAME}. Rename the input or use --sample-sheet.")
 
     settings.output.mkdir(parents=True, exist_ok=True)
 

@@ -47,3 +47,8 @@ def test_never_raises_on_odd_input():
 def test_clean_comment():
     assert clean_comment("[3 seqs] NZ_1 Genus species [...]") == "NZ_1 Genus species"
     assert clean_comment("NZ_1 Genus species") == "NZ_1 Genus species"
+
+
+def test_english_words_are_not_genera():
+    assert organism_from_comment("Human gut metagenome assembly", fallback="X") == "X"
+    assert organism_from_comment("Marine sediment bacterium", fallback="X") == "X"

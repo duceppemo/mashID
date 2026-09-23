@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- A reference header with a non-UTF-8 byte crashed mashID with `UnicodeDecodeError`; Mash output is now
+  decoded leniently.
+- A sample-sheet column named like an output column (`Identification`, `Note`, ...) silently overwrote
+  the result; such columns are now reported as `Sheet_<name>`.
+- Files with the same name in different input directories were silently merged into one sample; this
+  is now an error.
+- A sample named `summary` overwrote `summary_mashID.tsv`; it is now rejected.
+- Truncated or unreadable reads with `--max-reads` produced a traceback instead of an error message.
+- Empty or non-UTF-8 metadata tables produced a traceback.
+- `make_mashID_db --check` was quadratic in the number of organisms (minutes on proGenomes).
+- `make_mashID_db -i list.txt` resolves relative entries against the list file's directory and ignores
+  `#` comments; a prefix starting with `-` is rejected.
+- A warning is logged when a metadata sidecar is older than its database.
+- Build scripts pass the NCBI API key through the environment only, never on the command line.
+
 ## 0.2.7 (2026-09-22)
 
 ### Added

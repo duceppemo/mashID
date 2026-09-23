@@ -77,3 +77,13 @@ def test_normalise_organism_name():
     assert n("uncultured Mycobacterium sp.") == "Mycobacterium sp."  # MAG prefix dropped
     assert n("Bacterium X") == "Bacterium X"  # no binomial: unchanged
     assert n("") == "NA" and n("NA") == "NA"
+
+
+def test_empty_or_binary_metadata_is_a_clean_error(tmp_path):
+    p = tmp_path / "empty.tsv"
+    p.write_text("")
+    with pytest.raises(MashIDError, match="is empty"):
+        read_metadata(p)
+    p.write_bytes(b"\xff\xfe\x00garbage")
+    with pytest.raises(MashIDError, match="not a UTF-8"):
+        read_metadata(p)

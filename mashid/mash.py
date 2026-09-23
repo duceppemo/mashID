@@ -25,8 +25,12 @@ def find_mash() -> str:
     return exe
 
 
+# Mash echoes fasta headers verbatim; they are not guaranteed to be valid UTF-8, so never decode strictly.
+_TEXT = dict(capture_output=True, text=True, encoding="utf-8", errors="replace")
+
+
 def mash_version(exe: str = "mash") -> str:
-    result = subprocess.run([exe, "--version"], capture_output=True, text=True)
+    result = subprocess.run([exe, "--version"], **_TEXT)
     return result.stdout.strip() or result.stderr.strip()
 
 
@@ -38,7 +42,7 @@ def _fail(cmd: list[str], returncode: int, stderr: str) -> MashIDError:
 
 def _run(cmd: list[str]) -> subprocess.CompletedProcess:
     log.debug("Running: %s", " ".join(cmd))
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, **_TEXT)
     if result.returncode != 0:
         raise _fail(cmd, result.returncode, result.stderr)
     return result

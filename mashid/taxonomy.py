@@ -18,6 +18,8 @@ _NOT_A_GENUS = {
     "Complete", "Whole", "Draft", "Genome", "Chromosome", "Plasmid", "Strain", "Contig",
     "Scaffold", "Unnamed", "Sequence", "Isolate", "Sample", "Unknown", "Uncultured", "Bacterium",
     "Assembly", "Reference", "Partial", "Linear", "Circular", "Segment", "Clone", "Node",
+    "Human", "Mouse", "Bovine", "Marine", "Soil", "Gut", "Metagenome", "Bacteria", "Archaea",
+    "Virus", "Phage", "Environmental", "Synthetic", "Hypothetical",
 }
 
 # Infraspecific rank markers -> label used in the reported name.

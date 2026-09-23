@@ -117,3 +117,20 @@ def test_symlink_cycle_does_not_loop(tmp_path):
     (tmp_path / "a" / "loop").symlink_to(tmp_path, target_is_directory=True)
     samples = discover_samples(tmp_path)
     assert [s.name for s in samples] == ["S1"] and len(samples[0].files) == 1
+
+
+def test_same_basename_in_two_directories_is_an_error(tmp_path):
+    _touch(tmp_path / "runA" / "S1.fastq")
+    _touch(tmp_path / "runB" / "S1.fastq")
+    with pytest.raises(MashIDError, match="same name from different directories"):
+        discover_samples(tmp_path)
+
+
+def test_sample_sheet_reserved_columns_are_renamed(tmp_path):
+    from mashid.samples import read_sample_sheet
+    (tmp_path / "a.fq").write_text("@r\nACGT\n+\nIIII\n")
+    sheet = tmp_path / "s.tsv"
+    sheet.write_text("sample\tfile\tIdentification\tsite\nS1\ta.fq\tExpected organism\tLab\n")
+    samples, extra = read_sample_sheet(sheet, reserved={"Identification", "Note"})
+    assert extra == ["Sheet_Identification", "site"]
+    assert samples[0].extra == {"Sheet_Identification": "Expected organism", "site": "Lab"}
