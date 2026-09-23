@@ -11,7 +11,7 @@ package:
 
 source:
   url: https://github.com/duceppemo/mashID/archive/refs/tags/v{{ version }}.tar.gz
-  sha256: 26ca42bd1bfc9dd774bbd2ae8a862222ce186d5106874207adc26c9bba667276
+  sha256: 4e5a3693762b02fa523e35315fa8ed0381bf73cca8d10189bfed16f4b15612e0
 
 build:
   number: 0
