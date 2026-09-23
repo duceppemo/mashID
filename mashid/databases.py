@@ -102,6 +102,21 @@ REGISTRY: dict[str, RemoteDatabase] = {
             metadata_size=433_228,
         ),
         RemoteDatabase(
+            name="brucella",
+            filename="brucella_2026-09-22.msh",
+            url="https://ndownloader.figshare.com/files/69249067",
+            md5="bf3336e18cf0418a3490b60a1b0d9483",
+            size=31_086_528,
+            description="Brucella (NCBI taxon 234, including former Ochrobactrum): 1995 GenBank assemblies as of "
+                        "2026-09-22, dereplicated at 99.97% identity to 387 references (29 species) with NCBI "
+                        "TaxIDs. k=21, s=10000. Classical species are nearest-reference calls; biovars not "
+                        "resolved.",
+            doi="10.6084/m9.figshare.33970168.v1",
+            metadata_url="https://ndownloader.figshare.com/files/69249064",
+            metadata_md5="11462ffa6f915117629687b25e07c199",
+            metadata_size=102_308,
+        ),
+        RemoteDatabase(
             name="escherichia",
             filename="escherichia_shigella_2026-09-22.msh",
             url="https://ndownloader.figshare.com/files/69247507",

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- `brucella` database: 387 *Brucella* references (29 species, former *Ochrobactrum* included) from
+  GenBank, dereplicated at 0.0003, s=10000, NCBI TaxIDs,
+  [Figshare](https://doi.org/10.6084/m9.figshare.33970168), with metadata sidecar; 93.4% held-out
+  species concordance.
+
 ## 0.2.6 (2026-09-22)
 
 ### Changed
