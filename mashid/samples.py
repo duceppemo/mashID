@@ -74,7 +74,9 @@ def sample_name_from_file(path: Path | str) -> str:
 
 
 def find_sequence_files(input_path: Path) -> list[Path]:
-    """Return sequence files found at ``input_path`` (a file, or a directory searched recursively)."""
+    """Return sequence files found at ``input_path`` (a file, or a directory searched recursively).
+
+    Paths are absolute but symbolic links are not resolved, so a link's name names the sample."""
     input_path = Path(input_path)
     if input_path.is_symlink() and not input_path.exists():
         raise MashIDError(f"Input is a link to a missing file: {input_path} -> {os.readlink(input_path)}")
@@ -83,7 +85,7 @@ def find_sequence_files(input_path: Path) -> list[Path]:
             raise MashIDError(
                 f"Input file does not have a recognised extension ({', '.join(SEQ_EXTENSIONS)}): {input_path}"
             )
-        return [input_path.resolve()]
+        return [input_path.absolute()]
 
     if not input_path.is_dir():
         raise MashIDError(f"Input path does not exist: {input_path}")
@@ -104,7 +106,9 @@ def find_sequence_files(input_path: Path) -> list[Path]:
             if not path.exists():  # a symbolic link whose target is gone
                 broken.append(path)
                 continue
-            files.append(path.resolve())
+            # Keep the path as found (not resolved): a symbolic link's own name defines the sample name,
+            # which is how users rename samples without copying files.
+            files.append(path.absolute())
     if broken:
         listed = "\n  ".join(f"{p} -> {os.readlink(p)}" for p in broken[:10])
         more = f"\n  ... and {len(broken) - 10} more" if len(broken) > 10 else ""

@@ -102,7 +102,8 @@ def main() -> int:
     per: dict[str, list[int]] = collections.defaultdict(lambda: [0, 0, 0])  # correct, total, noted
     wrong: list[tuple[str, str, str, str]] = []
     for r in rows:
-        acc = r["Sample"]
+        m = re.match(r"(GC[AF]_\d+\.\d+)", r["Sample"])
+        acc = m.group(1) if m else r["Sample"]
         key, name = truth[acc]
         called = species_key(r["Identification"], args.rank)
         ok = called == key

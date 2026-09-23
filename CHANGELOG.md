@@ -6,6 +6,10 @@
 - `scripts/build_mycobacteriaceae_db.sh` is now `scripts/build_taxon_db.sh`: it builds a database for any
   NCBI taxon.
 
+### Fixed
+- A symbolic link's own name now defines the sample name; links were resolved before naming, so
+  renaming samples through links had no effect.
+
 ### Added
 - `salmonella` database: 1442 *Salmonella* references from RefSeq covering all subspecies, s=10000,
   NCBI TaxIDs, [Figshare](https://doi.org/10.6084/m9.figshare.33968917), with metadata sidecar.

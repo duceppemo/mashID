@@ -66,7 +66,16 @@ def test_discover_groups_pairs_and_recurses(tmp_path):
 def test_discover_single_file(tmp_path):
     f = _touch(tmp_path / "one_R1.fq")
     samples = discover_samples(f)
-    assert len(samples) == 1 and samples[0].name == "one" and samples[0].files == [f.resolve()]
+    assert len(samples) == 1 and samples[0].name == "one" and samples[0].files == [f.absolute()]
+
+
+def test_symlink_name_defines_the_sample(tmp_path):
+    real = _touch(tmp_path / "data" / "GCF_000012005.1_ASM1200v1_genomic.fna.gz")
+    (tmp_path / "in").mkdir()
+    (tmp_path / "in" / "isolate42.fna.gz").symlink_to(real)
+    samples = discover_samples(tmp_path / "in")
+    assert [s.name for s in samples] == ["isolate42"]
+    assert samples[0].files[0].read_bytes() == real.read_bytes()  # still readable through the link
 
 
 def test_more_than_two_files_warns_but_groups(tmp_path):
