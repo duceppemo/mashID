@@ -31,7 +31,15 @@ jobs:
       - name: Lint
         run: ruff check .
       - name: Test
-        run: pytest -v
+        run: pytest -v --cov=mashid --cov-report=term --cov-report=xml
+      # Upload once. Dependabot pull requests cannot read the CODECOV_TOKEN secret, so they skip the upload.
+      - uses: codecov/codecov-action@v7
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12' && github.actor != 'dependabot[bot]'
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
+          # Strict on pushes, to notice a broken Codecov setup; a Codecov hiccup should not fail a pull request.
+          fail_ci_if_error: ${{ github.event_name == 'push' && secrets.CODECOV_TOKEN != '' }}
       - name: Smoke test CLIs
         run: |
           mashID --version
