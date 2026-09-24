@@ -11,9 +11,9 @@
 
 <p align="center">
   <a href="https://github.com/duceppemo/mashID/actions/workflows/ci.yml"><img src="https://github.com/duceppemo/mashID/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/duceppemo/mashID/releases/latest"><img src="https://img.shields.io/github/v/release/duceppemo/mashID?label=release" alt="Latest release"></a>
+  <a href="https://github.com/duceppemo/mashID/releases/latest"><img src="https://img.shields.io/github/v/release/duceppemo/mashID?label=release&cacheSeconds=3600" alt="Latest release"></a>
   <!-- Enable once the bioconda recipe is merged (https://github.com/bioconda/bioconda-recipes/pull/69474):
-  <a href="https://anaconda.org/bioconda/mashid"><img src="https://img.shields.io/conda/vn/bioconda/mashid?label=bioconda" alt="Bioconda"></a>
+  <a href="https://anaconda.org/bioconda/mashid"><img src="https://img.shields.io/conda/vn/bioconda/mashid?label=bioconda&cacheSeconds=3600" alt="Bioconda"></a>
   -->
   <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10+">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/duceppemo/mashID" alt="License: MIT"></a>
