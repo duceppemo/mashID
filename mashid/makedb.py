@@ -180,8 +180,8 @@ def check_database(database: Path, min_length: int = DEFAULT_MIN_LENGTH) -> list
     if small:
         lines.append(f"  {len(small)} reference(s) have fewer hashes than the sketch size (very short sequences)")
 
-    unparsed = [e for e in entries
-                if e.organism in (NA, "", "unknown", e.accession) or len(e.organism.split()) < 2]
+    # One-word names are legitimate for viruses ("Lausannevirus"); only fallbacks count as unparsed.
+    unparsed = [e for e in entries if e.organism in (NA, "", "unknown", e.accession)]
     if unparsed:
         problems += len(unparsed)
         lines.append(f"  {len(unparsed)} reference(s) without a usable organism name (fix with --metadata or "
