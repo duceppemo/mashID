@@ -160,7 +160,12 @@ def check_database(database: Path, min_length: int = DEFAULT_MIN_LENGTH) -> list
              f"sketch size: {header.get('sketch_size', '?')}   names from: {source}"]
     problems = 0
 
-    short = [e for e in entries if e.length is not None and e.length < min_length]
+    lengths = sorted(e.length for e in entries if e.length is not None)
+    short_genome_db = bool(lengths) and lengths[len(lengths) // 2] < min_length
+    if short_genome_db:
+        lines.append(f"  median reference length {lengths[len(lengths) // 2]} bp: a database of short genomes "
+                     "(viruses, plasmids); mashID applies no reference-length filter to it")
+    short = [] if short_genome_db else [e for e in entries if e.length is not None and e.length < min_length]
     if short:
         problems += len(short)
         lines.append(f"  {len(short)} reference(s) shorter than {min_length} bp (partial records; mashID ignores "

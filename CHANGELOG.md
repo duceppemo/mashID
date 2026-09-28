@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- `--min-ref-length` defaults to `auto`: 100 kb unless most references of the database are shorter
+  (viral or plasmid databases), then no filter. `make_mashID_db --check` recognises such databases.
+
+### Added
+- `scripts/build_virus_db.sh` and `scripts/refseq_gbff_metadata.py`: a database of all RefSeq viral
+  genomes from the RefSeq release files, with names and TaxIDs from the GenBank flat files.
+
 ## 0.2.8 (2026-09-23)
 
 ### Fixed

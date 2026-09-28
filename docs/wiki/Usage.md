@@ -31,7 +31,7 @@ usage: mashID [-h] -i PATH -o DIR [-d FILE.msh|NAME] [--db-metadata FILE.tsv]
 | `--no-winner-take-all` | Disable Mash's winner-take-all strategy (`-w`). Reports more redundant hits and disables the mixture note. |
 | `--max-reads N` | Screen only the first N reads of each fastq sample, split across R1/R2 and streamed to Mash. `Sequences`/`Bases` then describe the screened reads. |
 | `--ambiguity-margin 0.005` | Flag a sample as ambiguous when a different organism scores within this identity margin of the top hit. |
-| `--min-ref-length 100000` | Ignore hits to references shorter than this many bp. `0` keeps all hits. |
+| `--min-ref-length BP\|auto` | Ignore hits to references shorter than this many bp. `auto` (default) uses 100000 unless most references of the database are shorter, as in a viral or plasmid database, in which case nothing is filtered. `0` keeps all hits. |
 | `--skip-stats` | Do not count reads/bases of the input files. |
 | `--fail-on {none,no-hit,note}` | Exit with code 2 when any sample has no hit, or has any note or no hit. For pipelines. |
 

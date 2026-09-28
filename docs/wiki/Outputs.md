@@ -52,8 +52,9 @@ related reference scores high.
 
 ## Ignored references
 
-Hits to references shorter than `--min-ref-length` (100 kb) are dropped before ranking, and the log
-says how many. Public genome collections contain partial records, and a 1 kb "genome" is fully
+Hits to references shorter than `--min-ref-length` are dropped before ranking, and the log says how
+many. The default is automatic: 100 kb for databases of bacterial genomes, no filter for databases
+whose references are mostly shorter than that (viruses, plasmids). Public genome collections contain partial records, and a 1 kb "genome" is fully
 contained in any related sample, which makes it the top hit at identity 1.0. The 2025 Mycobacteriaceae
 database, for example, contains nine such records; without the filter an *M. bovis* sample is reported
 as *M. tuberculosis* from a 947-k-mer fragment.

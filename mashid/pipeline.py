@@ -76,7 +76,7 @@ class Settings:
     skip_stats: bool = False
     max_reads: int | None = None  # screen only the first N reads of fastq samples
     ambiguity_margin: float = 0.005
-    min_ref_length: int = DEFAULT_MIN_REF_LENGTH  # ignore hits to references shorter than this (0 = keep all)
+    min_ref_length: int | None = None  # ignore hits to references shorter than this; None = auto, 0 = keep all
     fail_on: str = "none"  # "none", "no-hit" or "note": exit code 2 when a sample matches
     command_line: list[str] = field(default_factory=list)
 
@@ -261,6 +261,19 @@ def format_table(columns: list[str], rows: list[dict[str, str]]) -> str:
     return "\n".join(line.rstrip() for line in lines)
 
 
+def effective_min_ref_length(setting: int | None, metadata: dict[str, DbEntry] | None) -> int:
+    """Resolve ``--min-ref-length auto``: the default threshold, unless most references of the database
+    are shorter than it (a viral or plasmid database), in which case nothing is filtered."""
+    if setting is not None:
+        return max(0, setting)
+    lengths = sorted(e.length for e in (metadata or {}).values() if e.length is not None)
+    if lengths and lengths[len(lengths) // 2] < DEFAULT_MIN_REF_LENGTH:
+        log.info("Most references are shorter than %d bp (median %d): no reference-length filter",
+                 DEFAULT_MIN_REF_LENGTH, lengths[len(lengths) // 2])
+        return 0
+    return DEFAULT_MIN_REF_LENGTH
+
+
 def load_metadata(database: Path, override: Path | None, exe: str) -> dict[str, DbEntry]:
     """Reference metadata: ``--db-metadata``, else the sidecar, else built from ``mash info`` on the fly."""
     if override is not None:
@@ -299,7 +312,7 @@ def _screen_sample(sample: Sample, settings: Settings, database: Path, metadata:
         sample.sequences, sample.bases = subsampler.sequences, subsampler.bases
     else:
         hits = screen(database, sample.files, **common)
-    hits, n_short = drop_short_references(hits, metadata, settings.min_ref_length)
+    hits, n_short = drop_short_references(hits, metadata, settings.min_ref_length or 0)
     hits = sort_hits(hits, settings.sort_by)[: settings.n_hits]
     return SampleResult(sample=sample, hits=hits, n_short_refs=n_short)
 
@@ -420,6 +433,7 @@ def run(settings: Settings) -> int:
     database = resolve_database(settings.database)
     log.info("Database: %s", database)
     metadata = load_metadata(database, settings.db_metadata, exe)
+    settings.min_ref_length = effective_min_ref_length(settings.min_ref_length, metadata)
 
     extra_columns: list[str] = []
     if settings.sample_sheet is not None:

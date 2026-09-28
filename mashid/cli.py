@@ -35,6 +35,15 @@ def _positive_int(value: str) -> int:
     return i
 
 
+def _min_ref_length(value: str) -> int | None:
+    if value.strip().lower() == "auto":
+        return None
+    try:
+        return max(0, int(value))
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"expected an integer or 'auto', got {value!r}") from None
+
+
 def build_parser() -> argparse.ArgumentParser:
     max_cpu = os.cpu_count() or 1
     parser = argparse.ArgumentParser(
@@ -75,9 +84,11 @@ def build_parser() -> argparse.ArgumentParser:
     flt.add_argument("--ambiguity-margin", metavar="0.005", type=_fraction, default=0.005,
                      help="Flag a sample as ambiguous when a different organism scores within this identity "
                           "margin of the top hit. Default: %(default)s")
-    flt.add_argument("--min-ref-length", metavar="BP", type=int, default=DEFAULT_MIN_REF_LENGTH,
-                     help="Ignore hits to references shorter than this many bp (partial records in a database "
-                          "otherwise produce false top hits). 0 keeps all hits. Default: %(default)s")
+    flt.add_argument("--min-ref-length", metavar="BP|auto", type=_min_ref_length, default=None,
+                     help=f"Ignore hits to references shorter than this many bp (partial records in a database "
+                          f"otherwise produce false top hits). 0 keeps all hits. Default: auto, i.e. "
+                          f"{DEFAULT_MIN_REF_LENGTH} unless most references of the database are shorter (viral or "
+                          f"plasmid databases), then 0.")
     flt.add_argument("--skip-stats", action="store_true",
                      help="Do not count reads/bases of the input files (faster on very large fastq).")
     flt.add_argument("--fail-on", choices=["none", "no-hit", "note"], default="none",
@@ -134,7 +145,7 @@ def main(argv: list[str] | None = None) -> int:
         skip_stats=args.skip_stats,
         max_reads=args.max_reads,
         ambiguity_margin=args.ambiguity_margin,
-        min_ref_length=max(0, args.min_ref_length),
+        min_ref_length=args.min_ref_length,
         fail_on=args.fail_on,
         command_line=list(sys.argv if argv is None else ["mashID", *argv]),
     )

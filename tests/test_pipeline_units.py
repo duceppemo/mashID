@@ -103,3 +103,16 @@ def test_drop_short_references():
     assert drop_short_references(hits, None, 100_000) == (hits, 0)
     # unknown length: kept
     assert drop_short_references(hits, {"GCF_000000009.1": DbEntry("GCF_000000009.1", "x")}, 100_000)[1] == 0
+
+
+def test_effective_min_ref_length():
+    from mashid.metadata import DbEntry
+    from mashid.pipeline import DEFAULT_MIN_REF_LENGTH, effective_min_ref_length
+    bacteria = {f"A{i}": DbEntry(f"A{i}", "Genusa one", length=4_000_000) for i in range(5)}
+    viruses = {f"V{i}": DbEntry(f"V{i}", "Virus x", length=30_000) for i in range(5)}
+    assert effective_min_ref_length(None, bacteria) == DEFAULT_MIN_REF_LENGTH
+    assert effective_min_ref_length(None, viruses) == 0
+    assert effective_min_ref_length(None, {**bacteria, **viruses, "V9": DbEntry("V9", "v", length=1000)}) == 0
+    assert effective_min_ref_length(None, None) == DEFAULT_MIN_REF_LENGTH
+    assert effective_min_ref_length(50_000, viruses) == 50_000  # explicit values are respected
+    assert effective_min_ref_length(-5, viruses) == 0
