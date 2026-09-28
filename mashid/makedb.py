@@ -194,8 +194,9 @@ def check_database(database: Path, min_length: int = DEFAULT_MIN_LENGTH) -> list
 
     # Same species epithet under different genera usually means synonyms from renamed genera
     # (Mycobacterium abscessus vs Mycobacteroides abscessus): mashID treats them as different organisms.
+    # Only meaningful for Latin binomials; virus names ("Human papillomavirus 18") are not.
     by_epithet: dict[str, set[str]] = {}
-    for e in entries:
+    for e in [] if short_genome_db else entries:
         toks = e.organism.split()
         if len(toks) >= 2 and toks[1] not in ("sp.", "sp", "spp."):
             genus = toks[1] if toks[0] == "Candidatus" and len(toks) > 2 else toks[0]
