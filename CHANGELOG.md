@@ -7,6 +7,8 @@
   (viral or plasmid databases), then no filter. `make_mashID_db --check` recognises such databases.
 
 ### Added
+- `refseq_viral` database: all 19,625 RefSeq release 237 viral genomes and segments, ICTV names and
+  TaxIDs, s=2000, [Figshare](https://doi.org/10.6084/m9.figshare.34018548), with metadata sidecar.
 - `scripts/build_virus_db.sh` and `scripts/refseq_gbff_metadata.py`: a database of all RefSeq viral
   genomes from the RefSeq release files, with names and TaxIDs from the GenBank flat files.
 

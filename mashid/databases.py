@@ -132,6 +132,20 @@ REGISTRY: dict[str, RemoteDatabase] = {
             metadata_size=1_111_407,
         ),
         RemoteDatabase(
+            name="refseq_viral",
+            filename="refseq_viral_r237_2026-09-28.msh",
+            url="https://ndownloader.figshare.com/files/69440466",
+            md5="7394b54d24840d343ac77e527a53482d",
+            size=304_371_760,
+            description="All 19,625 viral genomes and segments of NCBI RefSeq release 237 (6427 phages), ICTV "
+                        "species names and TaxIDs. k=21, s=2000. Virus identification and prophage or viral "
+                        "contamination detection; no reference-length filter is applied.",
+            doi="10.6084/m9.figshare.34018548.v1",
+            metadata_url="https://ndownloader.figshare.com/files/69440463",
+            metadata_md5="eaff27b0ff31105d6b2619247cfde6be",
+            metadata_size=3_956_486,
+        ),
+        RemoteDatabase(
             name="progenomes4",
             filename="progenomes4_2026-09-22.msh",
             url="https://ndownloader.figshare.com/files/69242068",

@@ -114,6 +114,14 @@ percent is invisible and the identity estimate is noisy. `Est_Depth` says how de
 it is the reported organism; a large gap between depth and multiplicity (many bases, low
 multiplicity) suggests that much of the sample is something else, such as host DNA.
 
+## Prophages and viral contamination
+
+Screening a bacterial assembly or read set against `refseq_viral` reports every RefSeq virus whose
+sketch is contained in the sample. A complete prophage shows as a phage at identity close to 1 with
+nearly all hashes shared; a partial or diverged prophage shows at 0.9 to 0.97 with a fraction of the
+hashes. Several phages in one genome each get a line in the per-sample table. The `Identification`
+column of the summary is the best-contained virus, not "what the sample is".
+
 ## A quick decision table
 
 | Observation | Read it as |
