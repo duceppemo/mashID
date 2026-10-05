@@ -30,6 +30,7 @@ Homepage = "https://github.com/duceppemo/mashID"
 
 [project.scripts]
 mashID = "mashid.cli:main"
+mashid = "mashid.cli:main"  # lowercase alias; same file as mashID on case-insensitive filesystems
 make_mashID_db = "mashid.makedb:main"
 mashID_download_db = "mashid.download_cli:main"
 

@@ -19,6 +19,7 @@ build:
   script: {{ PYTHON }} -m pip install . --no-deps --no-build-isolation --no-cache-dir -vvv
   entry_points:
     - mashID = mashid.cli:main
+    - mashid = mashid.cli:main
     - make_mashID_db = mashid.makedb:main
     - mashID_download_db = mashid.download_cli:main
   run_exports:
@@ -37,6 +38,7 @@ requirements:
 test:
   commands:
     - mashID --help
+    - mashid --help
     - make_mashID_db --help
     - mashID_download_db --help
 
