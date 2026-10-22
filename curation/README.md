@@ -106,7 +106,7 @@ single genomospecies, *Shigella* is polyphyletic inside *E. coli*, and NCBI's AN
 | `progenomes4` | 32887 | 0 | none (one representative per species cluster) |
 | `refseq_viral` | 19625 | 765 over 421 refs | none; see below |
 | `brucella` | 387 | 1772 over 147 refs | 3 |
-| `salmonella` | 1442 | 803 over 267 refs | 15 |
+| `salmonella` | 1442 | 803 over 267 refs | 17 |
 | `escherichia` | 4503 | 2356 over 1631 refs | 1 |
 
 The decisive tests were MLST-9 for *Brucella* (`mlst --scheme brucella`), the Achtman *E. coli*
@@ -119,6 +119,13 @@ database were checked with SISTR, plus 30 *enterica* as a control: 15 of the 102
 are contradicted, and the rate tracks how rare the label is — `arizonae` 7 of 10, `houtenae` 2 of 3,
 `indica` 1 of 5, `diarizonae` 3 of 29, `salamae` 2 of 23, `enterica` 0 of 30. A rare subspecies name
 has few correct examples to dilute a submission error.
+
+The 2026-10-22 rebuild pulled 410 assemblies newer than the audited database, and the two of them
+carrying a rare subspecies name were **both** wrong: `GCF_026132465.1` (deposited *arizonae*, SISTR
+subsp. *enterica* serovar Cerro) and `GCF_001832525.1` (deposited *diarizonae* 38:[k]:-, SISTR subsp.
+*enterica* serovar Inverness). Each shares its serovar and a near-adjacent accession with a record
+already corrected here, so they arrive in submission batches. Re-audit the rare subspecies labels on
+every rebuild; an audit of the previous database does not cover the new assemblies.
 
 **What `match_status` is worth.** For those 102 references, `subspecies_match` was never wrong (0 of
 13), so it is a sound positive signal. The converse is not: 55 of the 70 conclusive labels carrying
