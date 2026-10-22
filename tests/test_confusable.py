@@ -249,6 +249,30 @@ def test_annotate_keeps_a_copy_of_the_sidecar_it_replaces(tmp_path):
     assert read_metadata(sidecar)                          # and produced a usable sidecar
 
 
+def test_a_plain_build_does_not_litter_the_output_directory(tmp_path):
+    """Only --annotate rewrites a sidecar somebody is already using. Backing up on the build path
+    too meant every re-run with different -s/-k left another .bak- file and a warning."""
+    import shutil
+
+    from mashid.makedb import make_database
+    from mashid.mash import find_mash
+    try:
+        find_mash()
+    except MashIDError:
+        pytest.skip("mash is not installed")
+    example = Path(__file__).resolve().parent.parent / "example"
+    src = tmp_path / "fasta"
+    src.mkdir()
+    for fasta in example.glob("db/../*/*.fna*"):
+        shutil.copy2(fasta, src)
+    if not list(src.iterdir()):
+        (src / "a.fna").write_text(">GCF_000000001.1 Exemplaria alpha\n" + "ACGT" * 2000 + "\n")
+    out = tmp_path / "out"
+    for _ in range(2):
+        make_database(src, out, "mydb", 1, 1000, 21, min_length=0)
+    assert not list(out.glob("*.bak-*"))
+
+
 @pytest.mark.parametrize("value", ["0", "2", "-1", "notanumber"])
 def test_confusable_distance_is_rejected_at_parse_time(value, capsys):
     """mash rejects it too, but only after find_mash(), the file checks and the sidecar read."""

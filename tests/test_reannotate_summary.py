@@ -186,6 +186,36 @@ def test_a_recorded_override_that_has_gone_missing_is_an_error(tmp_path):
         script.rebuild(out)
 
 
+def test_a_recorded_relative_override_is_refused_not_guessed_at(tmp_path):
+    """mashID records these absolute now, but a run.json from a build that did not would otherwise
+    resolve 'curated.tsv' against whatever directory the script happens to run from."""
+    out, _ = _results_dir(tmp_path)
+    _rewrite_run_json(out, parameters={"db_metadata": "curated.tsv"})
+    with pytest.raises(MashIDError, match="recorded a relative --db-metadata"):
+        script.rebuild(out)
+
+
+def test_database_override_says_it_is_dropping_the_recorded_table(tmp_path, capsys):
+    out, db = _results_dir(tmp_path)
+    curated = tmp_path / "curated.metadata.tsv"
+    write_sidecar(curated, [DbEntry("GCA_1.1", "Genusa curated", "9999", 4_000_000, 10000)])
+    _rewrite_run_json(out, parameters={"db_metadata": str(curated)})
+    assert script.rebuild(out, db).rows[0]["Identification"] == "Genusa one"
+    assert "--database overrides it" in capsys.readouterr().err
+
+
+def test_a_missing_companion_file_is_rebuilt_rather_than_called_up_to_date(tmp_path, capsys):
+    """'already up to date' must not be said about a summary whose _mqc.tsv or .json is gone."""
+    out, _ = _results_dir(tmp_path)
+    assert script.main([str(out), "--no-backup"]) == 0
+    for name in ("summary_mashID.json", "summary_mashID_mqc.tsv"):
+        (out / name).unlink()
+        capsys.readouterr()
+        assert script.main([str(out), "--no-backup"]) == 0
+        assert "nothing written" not in capsys.readouterr().out
+        assert (out / name).is_file()
+
+
 def test_the_json_records_which_tables_were_used_and_what_moved(tmp_path):
     out, db = _results_dir(tmp_path)
     assert script.main([str(out), "--no-backup"]) == 0

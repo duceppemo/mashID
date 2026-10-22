@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rebuild a finished run's summary from its per-sample tables and the database's current sidecars.
+"""Rebuild a finished run's summary from its per-sample tables and the current reference names.
 
 Usage: reannotate_summary.py RESULTS_DIR [--database DB.msh] [--dry-run]
 
@@ -10,6 +10,10 @@ be brought up to date from the hits already recorded in ``<sample>_mashID.tsv``,
 the reads again. Everything is produced by mashID's own ``annotate()``, ``summary_row()`` and
 ``write_*`` functions, so the result is what a fresh run would write; the screening itself cannot
 change, and the per-sample tables are left alone.
+
+The tables read are the ones the run itself used, including any ``--db-metadata`` /
+``--db-confusable`` it recorded; ``--database`` reads a given database's own sidecars instead, for a
+database that has moved. A run already in step with those tables is left untouched.
 
 Unlike the other scripts here this one imports mashid rather than standing alone, which is the
 point: reimplementing the annotation would no longer agree with mashID by construction. Install the
@@ -154,17 +158,26 @@ def rebuild(results_dir: Path, database: Path | None = None) -> Rebuilt:
     # was for -- a corrected sidecar kept outside the database directory, say -- and report the
     # regression as a change. Honour what the run recorded unless --database overrides it.
     overrides: dict[str, Path | None] = {"metadata": None, "confusable": None}
-    if database_arg is None:
-        for key in overrides:
-            recorded = params.get(f"db_{key}")
-            if recorded and Path(recorded).is_file():
-                overrides[key] = Path(recorded)
-                print(f"note: using the {key} table the run was made with, {recorded}",
-                      file=sys.stderr)
-            elif recorded:
-                raise MashIDError(f"the run used --db-{key} {recorded}, which no longer exists; "
-                                  f"restore it, or pass --database to re-annotate from a "
-                                  f"database's own sidecars")
+    for key in overrides:
+        recorded = params.get(f"db_{key}")
+        if not recorded:
+            continue
+        if database_arg is not None:
+            # --database means "read this database's own sidecars", so it deliberately drops the
+            # override -- but silently dropping it is how the run's labels would quietly regress.
+            print(f"note: the run used --db-{key} {recorded}; --database overrides it, so the "
+                  f"names come from the given database's sidecars instead", file=sys.stderr)
+            continue
+        if not Path(recorded).is_absolute():
+            raise MashIDError(f"the run recorded a relative --db-{key} ({recorded}), which cannot "
+                              f"be resolved from here; pass --database to re-annotate from a "
+                              f"database's own sidecars")
+        if not Path(recorded).is_file():
+            raise MashIDError(f"the run used --db-{key} {recorded}, which no longer exists; "
+                              f"restore it, or pass --database to re-annotate from a "
+                              f"database's own sidecars")
+        overrides[key] = Path(recorded)
+        print(f"note: using the {key} table the run was made with, {recorded}", file=sys.stderr)
 
     metadata = read_metadata(overrides["metadata"] or sidecar_path(database))
     confusable = confusable_mod.load(database, overrides["confusable"])
@@ -265,7 +278,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("results", metavar="RESULTS_DIR", type=Path,
                     help="A mashID output directory, holding mashID_run.json and the per-sample tables.")
     ap.add_argument("--database", metavar="DB.msh", type=Path, default=None,
-                    help="Database to read the sidecars from. Default: the one recorded in the run.")
+                    help="Read the names from this database's own sidecars, for a database that has "
+                         "moved. Default: the database the run recorded, and the --db-metadata / "
+                         "--db-confusable tables it was made with if it used any.")
     ap.add_argument("--no-backup", action="store_true")
     ap.add_argument("--dry-run", action="store_true",
                     help="Report what would change and write nothing.")
@@ -292,10 +307,15 @@ def main(argv: list[str] | None = None) -> int:
 
     # Nothing to do is not worth a rewrite: it would stack up another set of backups and stamp the
     # JSON with a re-annotation that changed nothing. The column set counts as something to do,
-    # since gaining a Note column is the whole point on a run that predates --confusable.
+    # since gaining a Note column is the whole point on a run that predates --confusable, and so
+    # does a missing companion file -- "already up to date" must not be said about a summary whose
+    # _mqc.tsv or .json is absent.
     header = _read_columns(args.results / SUMMARY_FILENAME)
-    if not changed and header == rebuilt.columns:
-        print("already up to date with these sidecars; nothing written")
+    missing = [f for f in REWRITTEN if not (args.results / f).is_file()]
+    if not changed and header == rebuilt.columns and not missing:
+        print(f"already up to date with {rebuilt.metadata_table.name}"
+              f"{' and ' + rebuilt.confusable_table.name if rebuilt.confusable_table else ''}; "
+              f"nothing written")
         return 0
 
     for filename in REWRITTEN:

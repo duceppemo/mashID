@@ -82,7 +82,7 @@ def test_download_verifies_checksum(monkeypatch, tmp_path, http_file):
 
     path = download("fake", dest_dir)
     assert path == dest_dir / "fake.msh" and path.read_bytes() == payload
-    assert not (dest_dir / "fake.msh.part").exists()
+    assert not list(dest_dir.glob("fake.msh.part-*"))
     # second call is a no-op (already installed, checksum matches)
     assert download("fake", dest_dir) == path
     # corrupted local copy is re-downloaded
@@ -91,7 +91,7 @@ def test_download_verifies_checksum(monkeypatch, tmp_path, http_file):
 
     with pytest.raises(MashIDError, match="Checksum mismatch"):
         download("bad", dest_dir)
-    assert not (dest_dir / "bad.msh").exists() and not (dest_dir / "bad.msh.part").exists()
+    assert not (dest_dir / "bad.msh").exists() and not list(dest_dir.glob("bad.msh.part-*"))
     with pytest.raises(MashIDError, match="Unknown database"):
         download("nope", dest_dir)
 
@@ -212,7 +212,7 @@ def test_a_sidecar_whose_registry_md5_is_wrong_fails_instead_of_looping(monkeypa
     for verify in (True, False):
         with pytest.raises(MashIDError, match="Checksum mismatch for fake.metadata.tsv"):
             download("wrongmd5", dest_dir, verify=verify)
-    assert not list(dest_dir.glob("*.part"))
+    assert not list(dest_dir.glob("*.part-*"))
 
 
 def test_an_unreadable_sidecar_is_treated_as_stale(monkeypatch, tmp_path, http_file, caplog):
@@ -270,6 +270,69 @@ def test_two_downloads_at_once_do_not_write_into_one_partial_file(monkeypatch, t
     assert not list(dest_dir.glob("*.part*"))   # each call cleans up its own temporary file
 
 
+def test_installed_files_are_readable_by_everyone(tmp_path, http_file, monkeypatch):
+    """mkstemp creates 0600 and os.replace carries the mode over, which would install a database
+    only its downloader can read -- and the shared MASHID_DB_DIR case is the whole point."""
+    import stat
+
+    url, payload, md5 = http_file
+    meta_bytes = b"Accession\tOrganism\tTaxID\nX1\tGenusa one\t7\n"
+    monkeypatch.setitem(REGISTRY, "modes", RemoteDatabase(
+        "modes", "fake.msh", url, md5, len(payload), "t", "d",
+        metadata_url=url.replace("fake.msh", "fake.metadata.tsv"),
+        metadata_md5=hashlib.md5(meta_bytes).hexdigest(), metadata_size=len(meta_bytes)))
+    dest_dir = tmp_path / "dbs"
+    download("modes", dest_dir)
+    for name in ("fake.msh", "fake.metadata.tsv"):
+        mode = stat.S_IMODE((dest_dir / name).stat().st_mode)
+        assert mode & stat.S_IRGRP and mode & stat.S_IROTH, f"{name} is {oct(mode)}"
+
+
+def test_a_failed_download_does_not_leak_a_descriptor(tmp_path, monkeypatch):
+    """mkstemp's fd is only adopted by os.fdopen. Evaluated after urlopen() in one `with`, a
+    refused connection leaked it on every attempt."""
+    import os
+    import urllib.error
+    import urllib.request
+
+    from mashid.databases import _fetch
+
+    def refuse(*a, **k):
+        raise urllib.error.URLError("connection refused")
+
+    monkeypatch.setattr(urllib.request, "urlopen", refuse)
+    before = len(os.listdir("/proc/self/fd"))
+    for _ in range(5):
+        with pytest.raises(MashIDError, match="failed"):
+            _fetch("http://localhost:1/x.msh", tmp_path / "x.msh", 10, None, True)
+    assert len(os.listdir("/proc/self/fd")) == before
+    assert not list(tmp_path.glob("*.part-*"))
+
+
+def test_an_abandoned_partial_download_is_swept_but_a_live_one_is_not(tmp_path, http_file):
+    """A scheduler's walltime SIGKILL leaves the temp file behind; a download running right now in
+    another process must keep its own."""
+    import os
+
+    url, payload, md5 = http_file
+    dest_dir = tmp_path / "dbs"
+    dest_dir.mkdir()
+    old = dest_dir / "fake.msh.part-oldone"
+    old.write_bytes(b"abandoned")
+    os.utime(old, (0, 0))
+    fresh = dest_dir / "fake.msh.part-livenow"
+    fresh.write_bytes(b"in flight elsewhere")
+    other = dest_dir / "another.msh.part-oldone"
+    other.write_bytes(b"not ours")
+    os.utime(other, (0, 0))
+
+    from mashid.databases import _fetch
+    _fetch(url, dest_dir / "fake.msh", len(payload), md5, True)
+    assert not old.exists()                 # a day-old leftover of this destination goes
+    assert fresh.exists()                   # one that could still be in use stays
+    assert other.exists()                   # another destination's is none of our business
+
+
 def test_a_truncated_transfer_is_a_clean_error(monkeypatch, tmp_path, http_file):
     """http.client.IncompleteRead is neither a URLError nor an OSError, so it used to traceback."""
     import http.client
@@ -293,7 +356,7 @@ def test_a_truncated_transfer_is_a_clean_error(monkeypatch, tmp_path, http_file)
     dest_dir = tmp_path / "dbs"
     with pytest.raises(MashIDError, match="failed"):
         download("cut", dest_dir)
-    assert not list(dest_dir.glob("*.part"))          # no orphaned partial download left behind
+    assert not list(dest_dir.glob("*.part-*"))        # no orphaned partial download left behind
 
 
 def test_download_skips_a_confusable_sidecar_that_is_not_published(monkeypatch, tmp_path, http_file):
