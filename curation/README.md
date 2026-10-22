@@ -44,20 +44,29 @@ silently.
 
 ## Upstream status
 
-Both corrections below were reported to GenBank (`gb-admin@ncbi.nlm.nih.gov`, cc
-`genomes@ncbi.nlm.nih.gov`) on 2026-10-22, with the evidence from the `Reason` column, so there is
-no need to file them again. NCBI maintains the ANI flag but not the records themselves, so the
-organism names change only if the submitting groups agree; a report is not a fix.
+Every correction here has been reported to GenBank/RefSeq (`gb-admin@ncbi.nlm.nih.gov`, cc
+`genomes@ncbi.nlm.nih.gov`) with the evidence from its `Reason` column, so none needs filing again:
+
+- **2026-10-22** — `GCA_013697125.1` and `GCA_025822535.1` (mycobacteriaceae).
+- **2026-10-22** — the 3 *Brucella* and 15 *Salmonella enterica* records from the sweep below, with
+  the MLST-9 profiles and the SISTR table, plus the note that `match_status` already separates them
+  and that nine of the *Salmonella* records are internally inconsistent (the deposited subspecies
+  contradicts the deposited serovar, which is a subsp. I serovar). The *Shigella* pair and
+  `GCF_002266055.1` were explicitly listed as *not* reported, since only negative evidence exists
+  for them.
+
+NCBI maintains the ANI flag but not the records themselves, so the organism names change only if the
+submitting groups agree; a report is not a fix.
 
 Check whether anything has changed upstream before trusting the `Checked` date in a `Reason`:
 
 ```bash
-for a in GCA_013697125.1 GCA_025822535.1; do
+while read -r a; do
   curl -s "https://api.ncbi.nlm.nih.gov/datasets/v2/genome/accession/$a/dataset_report" \
     | python3 -c "import json,sys; r=json.load(sys.stdin)['reports'][0]; \
         print(r['accession'], '|', r['organism']['organism_name'], '|', \
               (r.get('average_nucleotide_identity') or {}).get('match_status'))"
-done
+done < <(cut -f1 curation/label_corrections.tsv | tail -n +2)
 ```
 
 If a name is corrected at NCBI, its row here becomes a no-op rather than a conflict — a rebuild
