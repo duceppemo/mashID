@@ -34,6 +34,12 @@
   than the near-tie they are. Being a statement about the database and not the sample, the note does
   not count towards `--fail-on note`. The table also sorts mislabelled references to the top: both
   bad `mycobacteriaceae` references appear in its first 20 of 2102 rows.
+- Pre-built databases can publish their `<database>.confusable.tsv` alongside the sketch
+  (`confusable_url`/`confusable_md5`/`confusable_size` in the registry), and `mashID_download_db`
+  installs it with the database, so the all-pairs computation happens once for whoever built it
+  rather than once per user. A database installed before its table was published picks the table up
+  on the next download of that name, without re-fetching the sketch. No registry entry publishes
+  one yet, so nothing is fetched or required until one does.
 - `curation/label_corrections.tsv`: curated organism names for references that are mislabelled at
   NCBI, with the deposited name and the evidence for each correction recorded alongside.
 - `scripts/bin_by_species.py --corrections`: override the organism NCBI reports before binning, so a

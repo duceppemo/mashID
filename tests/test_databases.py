@@ -128,3 +128,41 @@ def test_download_fetches_the_metadata_sidecar(monkeypatch, tmp_path, http_file)
     monkeypatch.setitem(REGISTRY, "badmeta", bad)
     with pytest.raises(MashIDError, match="Checksum mismatch for bad.metadata.tsv"):
         download("badmeta", dest_dir)
+
+
+def test_download_fetches_the_confusable_sidecar(monkeypatch, tmp_path, http_file):
+    url, payload, md5 = http_file
+    conf_bytes = (b"Accession\tOrganism\tConfusable_Organism\tDistance\tNearest_Accession\n"
+                  b"X1\tGenusa one\tGenusa two\t0.001000\tX2\n")
+    (tmp_path / "served" / "fake.confusable.tsv").write_bytes(conf_bytes)
+    conf_url = url.replace("fake.msh", "fake.confusable.tsv")
+    remote = RemoteDatabase("withconf", "fake.msh", url, md5, len(payload), "t", "d",
+                            confusable_url=conf_url,
+                            confusable_md5=hashlib.md5(conf_bytes).hexdigest(),
+                            confusable_size=len(conf_bytes))
+    monkeypatch.setitem(REGISTRY, "withconf", remote)
+    dest_dir = tmp_path / "dbs"
+    download("withconf", dest_dir)
+    assert (dest_dir / "fake.confusable.tsv").read_bytes() == conf_bytes
+    # a stale local copy is replaced on the next call
+    (dest_dir / "fake.confusable.tsv").write_text("stale")
+    download("withconf", dest_dir)
+    assert (dest_dir / "fake.confusable.tsv").read_bytes() == conf_bytes
+    bad = RemoteDatabase("badconf", "bad.msh", url, md5, len(payload), "t", "d",
+                         confusable_url=conf_url, confusable_md5="0" * 32,
+                         confusable_size=len(conf_bytes))
+    monkeypatch.setitem(REGISTRY, "badconf", bad)
+    with pytest.raises(MashIDError, match="Checksum mismatch for bad.confusable.tsv"):
+        download("badconf", dest_dir)
+
+
+def test_download_skips_a_confusable_sidecar_that_is_not_published(monkeypatch, tmp_path, http_file):
+    """Every registry entry today has no confusable_url; nothing must be fetched or demanded."""
+    url, payload, md5 = http_file
+    remote = RemoteDatabase("noconf", "fake.msh", url, md5, len(payload), "t", "d")
+    monkeypatch.setitem(REGISTRY, "noconf", remote)
+    dest_dir = tmp_path / "dbs"
+    download("noconf", dest_dir)
+    assert (dest_dir / "fake.msh").is_file()
+    assert not (dest_dir / "fake.confusable.tsv").exists()
+    download("noconf", dest_dir)             # second call is a no-op, not a re-download
