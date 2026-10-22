@@ -100,11 +100,15 @@ def compute(database: Path, metadata: dict[str, DbEntry], threads: int = 1,
         return accession, (entry.organism if entry is not None else NA)
 
     best: dict[str, dict[str, Neighbour]] = {}
+    unnamed: set[str] = set()
     pairs = seen = 0
     for id_a, id_b, distance in dist_pairs(database, database, threads, max_distance, exe):
         seen += 1
         acc_a, org_a = organism_of(id_a)
         acc_b, org_b = organism_of(id_b)
+        for acc, org in ((acc_a, org_a), (acc_b, org_b)):
+            if org == NA:
+                unnamed.add(acc)
         if acc_a == acc_b or not distinguishable(org_a, org_b):
             continue
         pairs += 1
@@ -112,6 +116,12 @@ def compute(database: Path, metadata: dict[str, DbEntry], threads: int = 1,
             current = best.setdefault(acc, {}).get(other_org)
             if current is None or distance < current.distance:
                 best[acc][other_org] = Neighbour(other_org, distance, other_acc)
+    if unnamed:
+        # Sketch names that carry no accession the sidecar knows: every pair involving them is
+        # skipped, so say so rather than quietly reporting that nothing is confusable.
+        log.warning("%d reference(s) in the compared pairs have no organism in the metadata sidecar "
+                    "and were skipped (for example %s); refresh it with make_mashID_db --annotate",
+                    len(unnamed), ", ".join(sorted(unnamed)[:3]))
     log.info("Compared %d reference pair(s) within distance %g; %d cross-organism pair(s) over %d "
              "reference(s)", seen, max_distance, pairs, len(best))
     return {acc: sorted(n.values(), key=lambda x: (x.distance, x.organism))
@@ -175,6 +185,9 @@ def load(database: Path, override: Path | None) -> dict[str, list[Neighbour]] | 
         return None
     table = read(path)
     log.info("Loaded inseparable-organism pairs for %d reference(s) from %s", len(table), path)
+    if path.stat().st_mtime < Path(database).stat().st_mtime:
+        log.warning("%s is older than the database; if the database was rebuilt, refresh it with "
+                    "make_mashID_db --confusable", path.name)
     return table
 
 

@@ -172,6 +172,7 @@ def dist_pairs(
     stderr_chunks: list[str] = []
     reader = threading.Thread(target=lambda: stderr_chunks.append(proc.stderr.read()), daemon=True)
     reader.start()
+    drained = False
     try:
         for line in proc.stdout:
             fields = line.rstrip("\n").split("\t")
@@ -182,13 +183,18 @@ def dist_pairs(
             except ValueError:            # a header or a malformed line
                 continue
             yield fields[0], fields[1], distance
+        drained = True
     finally:
         with contextlib.suppress(Exception):
             proc.stdout.close()
         returncode = proc.wait()
         reader.join(timeout=5)
-        if returncode != 0:
-            raise _fail(cmd, returncode, "".join(stderr_chunks))
+        with contextlib.suppress(Exception):
+            proc.stderr.close()
+        # A caller that stops early closes the pipe under Mash, which then dies of SIGPIPE; that is
+        # our doing, not a failure. Only a command that ran to the end can have failed.
+        if drained and returncode != 0:
+            raise _fail(cmd, returncode, "".join(c for c in stderr_chunks if c))
 
 
 def sketch(

@@ -230,6 +230,8 @@ def annotate_database(database: Path, metadata: Path | None, assembly_report: Pa
 def confusable_database(database: Path, metadata: Path | None, threads: int,
                         max_distance: float) -> Path:
     """Write the <db>.confusable.tsv sidecar: organisms this database cannot tell apart."""
+    if max_distance <= 0:
+        raise MashIDError(f"--confusable-distance must be greater than 0 (got {max_distance})")
     exe = find_mash()
     if not database.is_file():
         raise MashIDError(f"Mash database not found: {database}")
@@ -241,7 +243,11 @@ def confusable_database(database: Path, metadata: Path | None, threads: int,
                               f"make_mashID_db --annotate, or pass --metadata")
         entries = read_metadata(path)
     neighbours = confusable.compute(database, entries, threads, max_distance, exe)
-    return confusable.write(confusable.confusable_path(database), neighbours, entries)
+    path = confusable.confusable_path(database)
+    try:
+        return confusable.write(path, neighbours, entries)
+    except OSError as exc:
+        raise MashIDError(f"Could not write {path}: {exc}") from exc
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -15,10 +15,12 @@ against the wrong species and can survive as a near-duplicate of the cluster it 
 ```bash
 bin_by_species.py assembly_data_report.jsonl ncbi_dataset/data binned/ \
     --corrections curation/label_corrections.tsv
-make_mashID_db -i binned/ -o <db>.msh \
+make_mashID_db -i binned/ -o /path/to/db -p my_database \
     --assembly-report assembly_data_report.jsonl \
     --metadata curation/label_corrections.tsv
 ```
+
+(`-o` is the output directory and `-p` the file name without `.msh`.)
 
 ## On an already-built database
 

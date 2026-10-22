@@ -85,10 +85,10 @@ Build the `<database>.confusable.tsv` sidecar (`make_mashID_db --confusable`) an
 the output instead of leaving it to be remembered:
 
 ```
-Identity  Identification                             Note
-0.99989   Mycobacterium tuberculosis variant bovis   Not separable in this database from: Mycobacterium
-                                                     tuberculosis, Mycobacterium tuberculosis variant
-                                                     africanum, Mycobacterium mungi and 3 more
+Identity        0.99989
+Identification  Mycobacterium tuberculosis variant bovis
+Note            Not separable in this database from: Mycobacterium tuberculosis, Mycobacterium
+                tuberculosis variant africanum, Mycobacterium mungi and 3 more
 ```
 
 Do not read the runner-up's identity as the margin: under winner-take-all it is not one. See Outputs.
