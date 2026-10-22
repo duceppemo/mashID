@@ -79,6 +79,25 @@ def test_normalise_organism_name():
     assert n("") == "NA" and n("NA") == "NA"
 
 
+def test_salmonella_antigenic_formulae_keep_their_commas():
+    """A comma inside a serovar designation is part of the name, not punctuation between words.
+
+    Splitting on every comma truncated these at the first one, so a reference deposited as
+    "serovar 18:z4,z23:-" was reported as "serovar 18:z4", which is not a valid formula.
+    """
+    from mashid.metadata import normalise_organism_name as n
+    assert n("Salmonella enterica subsp. arizonae serovar 18:z4,z23:-") == \
+        "Salmonella enterica subsp. arizonae serovar 18:z4,z23:-"
+    assert n("Salmonella enterica subsp. diarizonae serovar 16:z10:e,n,x,z15") == \
+        "Salmonella enterica subsp. diarizonae serovar 16:z10:e,n,x,z15"
+    assert n("Salmonella enterica subsp. houtenae serovar 48:g,z51:-") == \
+        "Salmonella enterica subsp. houtenae serovar 48:g,z51:-"
+    # strain text is still stripped, including after a comma-bearing formula
+    assert n("Salmonella enterica subsp. arizonae serovar 18:z4,z23:- str. CVM N23850") == \
+        "Salmonella enterica subsp. arizonae serovar 18:z4,z23:-"
+    assert n("Salmonella enterica subsp. salamae str. DMA-1") == "Salmonella enterica subsp. salamae"
+
+
 def test_empty_or_binary_metadata_is_a_clean_error(tmp_path):
     p = tmp_path / "empty.tsv"
     p.write_text("")

@@ -46,8 +46,12 @@ def clean_comment(comment: str) -> str:
 
 
 def _tokens(text: str) -> list[str]:
-    # Commas and semicolons carry no taxonomic meaning; drop them so "441," becomes "441".
-    return [t for t in text.replace(",", " ").replace(";", " ").split() if t]
+    # Commas and semicolons are punctuation between words ("strain 441, complete genome"), so they
+    # are stripped from the ends of a token. They are not split on: inside a token a comma belongs
+    # to the designation, as in the Salmonella antigenic formulae "serovar 18:z4,z23:-" and
+    # "serovar 16:z10:e,n,x,z15". Replacing every comma with a space truncated those at the first
+    # comma, leaving "serovar 18:z4", which is not a valid formula.
+    return [stripped for t in text.split() if (stripped := t.strip(",;"))]
 
 
 def _find_binomial(tokens: list[str]) -> tuple[int, str, str] | None:
