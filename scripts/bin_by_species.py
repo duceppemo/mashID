@@ -8,12 +8,15 @@ Creates binned/<Genus_species>/<accession>_....fna[.gz] as symbolic links (or co
 With --rank subspecies, bins are split further by "subsp. X" (and "serovar X" with --rank serovar).
 --max-bin N caps every bin at N assemblies, keeping complete genomes first, then chromosome,
 scaffold and contig level, so dereplication of huge species (Salmonella, E. coli) stays tractable.
+--corrections overrides the organism name NCBI reports for named accessions, so a genome deposited
+under the wrong species is binned (and dereplicated) with its true relatives.
 A summary of bins and sizes is printed; the accession -> bin table is written to binned/bins.tsv.
 """
 
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import os
 import re
@@ -45,6 +48,37 @@ def species_of(organism: str, rank: str = "species") -> str:
     return re.sub(r"[^A-Za-z0-9_.:,\[\]-]", "_", name)
 
 
+def normalise_header(fieldnames: list[str] | None) -> dict[str, str]:
+    """Map lowercase, punctuation-free column names to the actual header names."""
+    return {re.sub(r"[^a-z0-9]", "", f.lower()): f for f in (fieldnames or [])}
+
+
+def load_corrections(path: Path) -> dict[str, tuple[str, str]]:
+    """Read a TSV/CSV of curated labels into {accession: (organism, taxid)}.
+
+    Needs columns Accession and Organism; TaxID is optional. Other columns are ignored,
+    so the same file can carry the evidence for each correction.
+    """
+    delimiter = "," if path.suffix.lower() == ".csv" else "\t"
+    with open(path, newline="") as fh:
+        reader = csv.DictReader(fh, delimiter=delimiter)
+        cols = normalise_header(reader.fieldnames)
+        acc_col = cols.get("accession") or cols.get("assemblyaccession") or cols.get("acc")
+        org_col = (cols.get("organism") or cols.get("organismname") or cols.get("species")
+                   or cols.get("name"))
+        if not acc_col or not org_col:
+            sys.exit(f"{path}: expected columns 'Accession' and 'Organism'; "
+                     f"found {reader.fieldnames}")
+        tax_col = cols.get("taxid") or cols.get("taxonomyid")
+        out = {}
+        for row in reader:
+            acc = (row.get(acc_col) or "").strip()
+            organism = (row.get(org_col) or "").strip()
+            if acc and organism:
+                out[acc] = (organism, (row.get(tax_col) or "").strip() if tax_col else "")
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("report", type=Path, help="assembly_data_report.jsonl from the datasets archive")
@@ -55,7 +89,13 @@ def main() -> int:
                     help="Bin by species (default), by subspecies, or by subspecies and serovar")
     ap.add_argument("--max-bin", type=int, default=0, metavar="N",
                     help="Keep at most N assemblies per bin, preferring higher assembly levels (0 = no cap)")
+    ap.add_argument("--corrections", metavar="FILE.tsv", type=Path, default=None,
+                    help="TSV/CSV with columns Accession, Organism and optionally TaxID, overriding "
+                         "the organism NCBI reports for those accessions")
     args = ap.parse_args()
+
+    corrections = load_corrections(args.corrections) if args.corrections else {}
+    applied: set[str] = set()
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     level_rank = {"Complete Genome": 0, "Chromosome": 1, "Scaffold": 2, "Contig": 3}
@@ -71,6 +111,10 @@ def main() -> int:
             org = rec.get("organism") or {}
             organism = org.get("organismName") or org.get("organism_name") or "unknown"
             taxid = str(org.get("taxId") or org.get("tax_id") or "")
+            if acc in corrections:
+                organism, corrected_taxid = corrections[acc]
+                taxid = corrected_taxid or taxid
+                applied.add(acc)
             info = rec.get("assemblyInfo") or rec.get("assembly_info") or {}
             level = level_rank.get(info.get("assemblyLevel") or info.get("assembly_level") or "", 4)
             files = sorted(p for p in (args.data_dir / acc).glob("*")
@@ -107,6 +151,10 @@ def main() -> int:
                 table.write(f"{acc}\t{organism}\t{taxid}\t{bin_name}\n")
     if dropped:
         print(f"{dropped} assemblies dropped by --max-bin {args.max_bin}", file=sys.stderr)
+    if corrections:
+        print(f"{len(applied)} of {len(corrections)} label correction(s) applied", file=sys.stderr)
+        for acc in sorted(set(corrections) - applied):
+            print(f"  unused correction: {acc} not in {args.report.name}", file=sys.stderr)
 
     total = sum(counts.values())
     print(f"{total} assemblies in {len(counts)} bins; {missing} accession(s) without a sequence file",
