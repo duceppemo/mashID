@@ -53,10 +53,15 @@ REGISTRY: dict[str, RemoteDatabase] = {
             description="Mycobacteriaceae (NCBI taxon 1762): 16,189 GenBank assemblies as of 2026-09-22, "
                         "dereplicated per species at 99.9% identity to 3534 references, with NCBI TaxIDs. "
                         "k=21, s=10000.",
-            doi="10.6084/m9.figshare.33965176.v1",
-            metadata_url="https://ndownloader.figshare.com/files/69229303",
-            metadata_md5="aca42431cca7dea41bf2637555817499",
-            metadata_size=1_067_237,
+            doi="10.6084/m9.figshare.33965176.v2",
+            # v2 corrects two mislabelled references (see curation/label_corrections.tsv) and adds
+            # the confusable table. The sketch is unchanged, so only the sidecars were re-uploaded.
+            metadata_url="https://ndownloader.figshare.com/files/70479336",
+            metadata_md5="980068b88ed8f23c820f55dc442694c7",
+            metadata_size=1_067_504,
+            confusable_url="https://ndownloader.figshare.com/files/70479333",
+            confusable_md5="8a41d9e4e32407722eaf6f0ae75a9c56",
+            confusable_size=210_380,
         ),
         RemoteDatabase(
             name="mycobacteriaceae-2025",
