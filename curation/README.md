@@ -106,7 +106,7 @@ single genomospecies, *Shigella* is polyphyletic inside *E. coli*, and NCBI's AN
 | `progenomes4` | 32887 | 0 | none (one representative per species cluster) |
 | `refseq_viral` | 19625 | 765 over 421 refs | none; see below |
 | `brucella` | 387 | 1772 over 147 refs | 3 |
-| `salmonella` | 1442 | 803 over 267 refs | 17 |
+| `salmonella` | 1442 | 803 over 267 refs | 28 |
 | `escherichia` | 4503 | 2356 over 1631 refs | 2 |
 
 The decisive tests were MLST-9 for *Brucella* (`mlst --scheme brucella`), the Achtman *E. coli*
@@ -126,6 +126,20 @@ subsp. *enterica* serovar Cerro) and `GCF_001832525.1` (deposited *diarizonae* 3
 *enterica* serovar Inverness). Each shares its serovar and a near-adjacent accession with a record
 already corrected here, so they arrive in submission batches. Re-audit the rare subspecies labels on
 every rebuild; an audit of the previous database does not cover the new assemblies.
+
+**Type the whole submission batch, not the surviving references.** Auditing survivors re-discovers
+one batch a record at a time, because every correction changes which genomes dereplication keeps:
+three successive salmonella rebuilds each surfaced one more wrong record from the same two
+submissions. Typing both submissions exhaustively — all 27 assemblies making an explicit
+non-*enterica* subspecies claim, rather than the 4 that happened to be references — ended it and
+produced 11 further corrections, with no inconclusive calls. The result is sharper than "batches are
+unreliable": in the CFSAN 2016-10-24 submission **all twelve** `subsp. diarizonae serovar 38:[k]:-`
+records are subsp. *enterica* serovar Inverness, while **all eleven** other non-*enterica* labels in
+that same submission (`60:r:e,n,x` → IIIb 60:r:z, `16:z10:e,n` → Redlands, `59:[k]:z35` →
+IIIb 38:(k):z35) type exactly as deposited. The error attaches to one serovar designation, not to
+the submitter or the date. All four `subsp. arizonae` records in the Sichuan Agricultural University
+2022-11-10 submission are subsp. *enterica* (three Cerro, one Apeyeme). None of the 27 carried
+`subspecies_match`, which is why a single submission could carry a dozen copies of one wrong label.
 
 **Mislabels come in submission batches, so check the batch, not the record.** The same thing happened
 in `escherichia` on the same rebuild, which is why that row says 2: correcting `GCF_002290495.1` from
