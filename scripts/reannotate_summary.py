@@ -33,6 +33,7 @@ import json
 import sys
 from collections import Counter
 from pathlib import Path
+from typing import NamedTuple
 
 try:
     from mashid import MashIDError
@@ -66,6 +67,11 @@ REWRITTEN = (SUMMARY_FILENAME, MULTIQC_FILENAME, JSON_FILENAME)
 # over from the file being replaced.
 LOOKED_UP_COLUMNS = ("Identification", "TaxID", "Note")
 DRY_RUN_SAMPLES = 20
+
+
+def _read_columns(summary: Path) -> list[str]:
+    with summary.open(newline="", encoding="utf-8-sig") as fh:
+        return list(csv.DictReader(fh, delimiter="\t").fieldnames or [])
 
 
 def _default(option: str):
@@ -108,13 +114,21 @@ def _int_or_none(value: str | None) -> int | None:
         return None
 
 
-def rebuild(results_dir: Path, database: Path | None = None) -> tuple[list[SampleResult], list[dict],
-                                                                      list[str], Path, list[str]]:
-    """Re-annotate every sample of a results directory.
+class Rebuilt(NamedTuple):
+    """What a re-annotation produced, and what it was produced from."""
 
-    Returns (results, rows, columns, database, changed), where ``changed`` names the samples whose
-    Identification, TaxID or Note the current sidecars would alter.
-    """
+    results: list[SampleResult]
+    rows: list[dict]
+    columns: list[str]
+    database: Path
+    changed: list[str]              # samples whose Identification, TaxID or Note would move
+    metadata_table: Path            # the sidecars actually read, which --db-metadata can move
+    confusable_table: Path | None
+
+
+def rebuild(results_dir: Path, database: Path | None = None) -> Rebuilt:
+    """Re-annotate every sample of a results directory, from the tables the run itself used."""
+    database_arg = database
     run_info_path = results_dir / RUN_INFO_FILENAME
     summary_path = results_dir / SUMMARY_FILENAME
     for required in (run_info_path, summary_path):
@@ -135,8 +149,25 @@ def rebuild(results_dir: Path, database: Path | None = None) -> tuple[list[Sampl
     if not database.is_file():
         raise MashIDError(f"Database not found: {database}; pass --database")
 
-    metadata = read_metadata(sidecar_path(database))
-    confusable = confusable_mod.load(database, None)
+    # A run made with --db-metadata/--db-confusable was annotated from those tables, not from the
+    # ones beside the .msh. Re-annotating it from the sidecars would undo exactly what the override
+    # was for -- a corrected sidecar kept outside the database directory, say -- and report the
+    # regression as a change. Honour what the run recorded unless --database overrides it.
+    overrides: dict[str, Path | None] = {"metadata": None, "confusable": None}
+    if database_arg is None:
+        for key in overrides:
+            recorded = params.get(f"db_{key}")
+            if recorded and Path(recorded).is_file():
+                overrides[key] = Path(recorded)
+                print(f"note: using the {key} table the run was made with, {recorded}",
+                      file=sys.stderr)
+            elif recorded:
+                raise MashIDError(f"the run used --db-{key} {recorded}, which no longer exists; "
+                                  f"restore it, or pass --database to re-annotate from a "
+                                  f"database's own sidecars")
+
+    metadata = read_metadata(overrides["metadata"] or sidecar_path(database))
+    confusable = confusable_mod.load(database, overrides["confusable"])
     if confusable is None:
         print(f"note: no {confusable_mod.confusable_path(database).name} beside the database, so no "
               f"'not separable' notes; write one with make_mashID_db --confusable", file=sys.stderr)
@@ -208,19 +239,24 @@ def rebuild(results_dir: Path, database: Path | None = None) -> tuple[list[Sampl
         old = existing.get(row["Sample"], {})
         if any(row[c] != (old.get(c) or "") for c in LOOKED_UP_COLUMNS):
             changed.append(row["Sample"])
-    return results, rows, columns, database, changed
+    return Rebuilt(results, rows, columns, database, changed,
+                   overrides["metadata"] or sidecar_path(database),
+                   overrides["confusable"] or (confusable_mod.confusable_path(database)
+                                               if confusable is not None else None))
 
 
-def provenance(database: Path) -> dict:
+def provenance(rebuilt: Rebuilt) -> dict:
     record: dict = {
         "at": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
-        "reason": "Identification, TaxID and Note regenerated from the recorded hits; the run "
-                  "predates the sidecars below",
+        "reason": "Identification, TaxID and Note looked up again from the sidecars below, using "
+                  "the hits already recorded for each sample",
         "screening_unchanged": True,
+        "samples_changed": list(rebuilt.changed),
     }
-    for key, path in (("metadata_sidecar", sidecar_path(database)),
-                      ("confusable_sidecar", confusable_mod.confusable_path(database))):
-        record[key] = {"path": str(path), "md5": md5sum(path)} if path.is_file() else None
+    for key, path in (("metadata_sidecar", rebuilt.metadata_table),
+                      ("confusable_sidecar", rebuilt.confusable_table)):
+        record[key] = ({"path": str(path), "md5": md5sum(path)}
+                       if path is not None and path.is_file() else None)
     return record
 
 
@@ -236,10 +272,11 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     try:
-        results, rows, columns, database, changed = rebuild(args.results, args.database)
+        rebuilt = rebuild(args.results, args.database)
     except MashIDError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
+    rows, changed = rebuilt.rows, rebuilt.changed
 
     print(f"{len(rows)} sample(s); {len(changed)} with a changed "
           f"{', '.join(LOOKED_UP_COLUMNS)}; {sum(1 for r in rows if r['Note'])} with any note")
@@ -253,17 +290,26 @@ def main(argv: list[str] | None = None) -> int:
         print("dry run: nothing written")
         return 0
 
+    # Nothing to do is not worth a rewrite: it would stack up another set of backups and stamp the
+    # JSON with a re-annotation that changed nothing. The column set counts as something to do,
+    # since gaining a Note column is the whole point on a run that predates --confusable.
+    header = _read_columns(args.results / SUMMARY_FILENAME)
+    if not changed and header == rebuilt.columns:
+        print("already up to date with these sidecars; nothing written")
+        return 0
+
     for filename in REWRITTEN:
         target = args.results / filename
         if target.is_file() and not args.no_backup:
             print(f"backup: {backup(target).name}")
 
-    write_tsv(args.results / SUMMARY_FILENAME, columns, rows)
+    write_tsv(args.results / SUMMARY_FILENAME, rebuilt.columns, rows)
     write_multiqc(args.results / MULTIQC_FILENAME, rows)
     json_path = args.results / JSON_FILENAME
-    write_json(json_path, results, rows, read_metadata(sidecar_path(database)), database)
+    write_json(json_path, rebuilt.results, rows, read_metadata(rebuilt.metadata_table),
+               rebuilt.database)
     doc = json.loads(json_path.read_text())
-    doc["reannotated"] = provenance(database)
+    doc["reannotated"] = provenance(rebuilt)
     json_path.write_text(json.dumps(doc, indent=2) + "\n")
     print(f"rewrote {', '.join(REWRITTEN)}")
     return 0

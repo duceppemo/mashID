@@ -7,6 +7,7 @@ import http.client
 import logging
 import os
 import shutil
+import tempfile
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -243,14 +244,23 @@ def _human(n: float) -> str:
 
 
 def _fetch(url: str, dest: Path, size: int, md5: str | None, verify: bool) -> None:
-    """Stream ``url`` to ``dest`` through a .part file, verifying the MD5 when given."""
+    """Stream ``url`` to ``dest`` through a temporary file, verifying the MD5 when given.
+
+    The temporary name is unique per call, so two processes installing the same database at once --
+    two cluster jobs that each fetch it on first use -- cannot write into one another's partial
+    file. Sharing one ``<name>.part`` meant the second truncated what the first was still writing,
+    and whichever finished first published a file with a hole of zeros in it under a checksum
+    computed from its own complete stream.
+    """
     log.info("Downloading %s (%s) from %s", dest.name, _human(size), url)
-    tmp = dest.with_name(dest.name + ".part")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(dir=dest.parent, prefix=dest.name + ".part-")
+    tmp = Path(tmp_name)
     digest = hashlib.md5()
     received = 0
     request = urllib.request.Request(url, headers={"User-Agent": f"mashID/{__version__}"})
     try:
-        with urllib.request.urlopen(request, timeout=60) as response, open(tmp, "wb") as out:
+        with urllib.request.urlopen(request, timeout=60) as response, os.fdopen(fd, "wb") as out:
             next_report = 0.1
             while True:
                 chunk = response.read(_CHUNK)
@@ -262,18 +272,39 @@ def _fetch(url: str, dest: Path, size: int, md5: str | None, verify: bool) -> No
                 if size and received / size >= next_report:
                     log.info("  %3.0f%% (%s)", 100 * received / size, _human(received))
                     next_report += 0.1
+        if verify and md5 and digest.hexdigest() != md5:
+            raise MashIDError(
+                f"Checksum mismatch for {dest.name}: expected {md5}, got {digest.hexdigest()}. "
+                "The download may be corrupted or the remote file may have changed."
+            )
+        # Atomic, so an interrupted download never leaves a half-written database in place.
+        os.replace(tmp, dest)
     # http.client.IncompleteRead -- a response cut short mid-stream -- is neither a URLError nor an
     # OSError, and a 284 MB transfer is long enough for that to happen.
     except (urllib.error.URLError, http.client.HTTPException, OSError) as exc:
         tmp.unlink(missing_ok=True)
         raise MashIDError(f"Download of {url} failed: {exc}") from exc
-    if verify and md5 and digest.hexdigest() != md5:
+    except BaseException:
         tmp.unlink(missing_ok=True)
-        raise MashIDError(
-            f"Checksum mismatch for {dest.name}: expected {md5}, got {digest.hexdigest()}. "
-            "The download may be corrupted or the remote file may have changed."
-        )
-    os.replace(tmp, dest)
+        raise
+
+
+def registry_name_of(database: Path) -> str | None:
+    """The registry name a path belongs to, or None for a self-built database."""
+    return next((n for n, r in REGISTRY.items() if r.filename == Path(database).name), None)
+
+
+def refresh_advice(database: Path, rebuild_flag: str) -> str:
+    """How to bring a stale sidecar back in step with its database.
+
+    For a pre-built database the answer is to fetch the published sidecar again, never to rebuild
+    it: ``make_mashID_db --annotate`` without ``--metadata`` takes every name from the sketch
+    headers, which throws away the curated label corrections and all of the TaxIDs.
+    """
+    name = registry_name_of(database)
+    if name is not None:
+        return f"mashID_download_db {name}"
+    return f"make_mashID_db {rebuild_flag} {Path(database).name}"
 
 
 def _up_to_date(path: Path, md5: str | None, verify: bool) -> bool:

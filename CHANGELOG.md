@@ -79,6 +79,25 @@
 - `confusable.note_for()` returned no note at all when the top hit's reference was missing from the
   metadata sidecar, because the new name filter had nothing to judge against. With no name nothing
   can be ruled out, so every neighbour is reported.
+- Both "sidecar is older than the database" warnings advised `make_mashID_db --annotate`, which
+  without `--metadata` rebuilds the sidecar from the sketch headers: on a pre-built database that
+  reverts the curated label corrections and discards all 3,534 TaxIDs. For a database in the
+  registry they now point at `mashID_download_db <name>`, which refetches the published sidecars and
+  leaves the 284 MB sketch alone, and `make_mashID_db --annotate` keeps a dated copy of any sidecar
+  it replaces. The warnings are easy to trigger without rebuilding anything — a directory moved
+  without preserving timestamps is enough — so the advice mattered more than the warning.
+- `mashID_download_db` streamed every download through one `<name>.part`, so two processes
+  installing the same database at once — two cluster jobs each fetching it on first use — wrote into
+  the same partial file: the second truncated what the first was still writing, one died with an
+  uncaught `FileNotFoundError`, and whichever finished first could publish a file with a hole of
+  zeros in it under a checksum taken from its own complete stream. Each download now uses a unique
+  temporary file, and an interrupted one cleans up after itself.
+- `scripts/reannotate_summary.py` ignored the `--db-metadata`/`--db-confusable` a run was made with
+  and re-annotated from the sidecars beside the `.msh`, undoing exactly what the override was for
+  and reporting the regression as a change. It now uses the tables the run recorded, errors if one
+  has since gone missing, and records in the JSON which tables it used and which samples moved. A
+  run that is already up to date is left alone instead of being rewritten, re-backed-up and stamped
+  with a re-annotation that changed nothing.
 - A download cut short mid-stream raised `http.client.IncompleteRead`, which is neither a
   `URLError` nor an `OSError`, giving a traceback and leaving a `.part` file behind.
 - `mashID_run.json` recorded the sidecars sitting beside the database rather than the ones the run

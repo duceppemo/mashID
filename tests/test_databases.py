@@ -2,6 +2,7 @@ import hashlib
 import http.server
 import threading
 from functools import partial
+from pathlib import Path
 
 import pytest
 
@@ -156,6 +157,20 @@ def test_download_fetches_the_confusable_sidecar(monkeypatch, tmp_path, http_fil
         download("badconf", dest_dir)
 
 
+def test_refresh_advice_points_at_the_right_command():
+    """make_mashID_db --annotate without --metadata rebuilds a sidecar from the sketch headers,
+    which discards curated labels and every TaxID. Never advise it for a pre-built database."""
+    from mashid.databases import REGISTRY as R
+    from mashid.databases import refresh_advice, registry_name_of
+    known = Path("/db") / R["mycobacteriaceae"].filename
+    assert registry_name_of(known) == "mycobacteriaceae"
+    assert refresh_advice(known, "--annotate") == "mashID_download_db mycobacteriaceae"
+    assert refresh_advice(known, "--confusable") == "mashID_download_db mycobacteriaceae"
+    mine = Path("/db/my_own.msh")
+    assert registry_name_of(mine) is None
+    assert refresh_advice(mine, "--annotate") == "make_mashID_db --annotate my_own.msh"
+
+
 def test_no_verify_still_refreshes_the_sidecars(monkeypatch, tmp_path, http_file):
     """--no-verify skips hashing a 284 MB sketch. It must not leave a new confusable table beside
     the deposited names it was computed to replace."""
@@ -222,6 +237,37 @@ def test_an_unreadable_sidecar_is_treated_as_stale(monkeypatch, tmp_path, http_f
         sidecar.chmod(0o644)
     assert "Could not read fake.metadata.tsv" in caplog.text
     assert sidecar.read_bytes() == meta_bytes
+
+
+def test_two_downloads_at_once_do_not_write_into_one_partial_file(monkeypatch, tmp_path, http_file):
+    """Two cluster jobs installing the same database each fetched through one <name>.part: the
+    second truncated what the first was still writing, and whichever finished first published a
+    file with a hole of zeros in it under a checksum taken from its own complete stream."""
+    import threading
+
+    url, payload, md5 = http_file
+    monkeypatch.setitem(REGISTRY, "race", RemoteDatabase("race", "race.msh", url, md5, len(payload),
+                                                         "t", "d"))
+    dest_dir = tmp_path / "dbs"
+    dest_dir.mkdir()
+    started = threading.Barrier(2)
+    errors: list[BaseException] = []
+
+    def go():
+        try:
+            started.wait(timeout=10)
+            download("race", dest_dir)
+        except BaseException as exc:            # noqa: BLE001 - recorded and re-raised below
+            errors.append(exc)
+
+    threads = [threading.Thread(target=go) for _ in range(2)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=30)
+    assert not errors, errors
+    assert (dest_dir / "race.msh").read_bytes() == payload
+    assert not list(dest_dir.glob("*.part*"))   # each call cleans up its own temporary file
 
 
 def test_a_truncated_transfer_is_a_clean_error(monkeypatch, tmp_path, http_file):
