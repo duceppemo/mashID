@@ -55,10 +55,11 @@ Corrections are reported to GenBank/RefSeq (`gb-admin@ncbi.nlm.nih.gov`, cc
   `GCF_002266055.1` were explicitly listed as *not* reported, since only negative evidence exists
   for them.
 
-**Not yet sent** — the 14 records found after that report went out, all of them on the rebuilds of
-2026-10-22: 13 *Salmonella* (11 of the twelve `diarizonae serovar 38:[k]:-` records in the CFSAN
-2016-10-24 submission, and `GCF_026132465.1` and `GCF_026132575.1` from the Sichuan 2022-11-10
-submission) and `GCF_002290505.1` (*Shigella*). A follow-up organised by submission rather than by
+**Not yet sent** — the 15 records found after that report went out, all of them on the rebuilds of
+2026-10-22: 14 *Salmonella* (11 of the twelve `diarizonae serovar 38:[k]:-` records in the CFSAN
+2016-10-24 submission, `GCF_026132465.1` and `GCF_026132575.1` from the Sichuan 2022-11-10
+submission, and `GCF_016903075.1`, the one deposited under the common label) and `GCF_002290505.1`
+(*Shigella*). A follow-up organised by submission rather than by
 record, including the eleven same-submission controls that type exactly as deposited, is drafted and
 awaiting a send. Keep this list accurate: a row here is not evidence that anyone upstream has been
 told about it.
@@ -114,7 +115,7 @@ single genomospecies, *Shigella* is polyphyletic inside *E. coli*, and NCBI's AN
 | `progenomes4` | 32887 | 0 | none (one representative per species cluster) |
 | `refseq_viral` | 19625 | 765 over 421 refs | none; see below |
 | `brucella` | 387 | 1772 over 147 refs | 3 |
-| `salmonella` | 1442 | 803 over 267 refs | 28 |
+| `salmonella` | 1442 | 803 over 267 refs | 29 |
 | `escherichia` | 4503 | 2356 over 1631 refs | 2 |
 
 The decisive tests were MLST-9 for *Brucella* (`mlst --scheme brucella`), the Achtman *E. coli*
@@ -148,6 +149,16 @@ IIIb 38:(k):z35) type exactly as deposited. The error attaches to one serovar de
 the submitter or the date. All four `subsp. arizonae` records in the Sichuan Agricultural University
 2022-11-10 submission are subsp. *enterica* (three Cerro, one Apeyeme). None of the 27 carried
 `subspecies_match`, which is why a single submission could carry a dozen copies of one wrong label.
+
+**The audit's own blind spot: a common label on a rare subspecies.** Screening rare labels is right
+because that is where the *rate* is highest, but it cannot find the reverse error, and 30 subsp.
+*enterica* controls out of roughly 3,000 references is not coverage of the common class. Once the
+other corrections had collapsed their pairs, exactly one sub-threshold cross-name pair was left in
+the salmonella database, and it was this: `GCF_016903075.1`, deposited subsp. *enterica*, is subsp.
+*salamae* serovar II 58:d:z8 on 330 alleles — 0.000542 from `GCF_002034565.1`, deposited *and*
+independently confirmed as *salamae* II 58:d:z6. Two *salamae* genomes, one named wrongly. The
+lesson is the method rather than the record: after correcting the rare labels, re-read the
+confusable table, because collapsing the easy pairs is what makes the remaining one visible.
 
 **Mislabels come in submission batches, so check the batch, not the record.** The same thing happened
 in `escherichia` on the same rebuild, which is why that row says 2: correcting `GCF_002290495.1` from
