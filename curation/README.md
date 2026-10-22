@@ -79,7 +79,7 @@ Only with positive evidence of the true identity, not merely an NCBI ANI flag. W
 *M. tuberculosis* complex every member sits above 98% ANI and several species have no type
 assembly, so `taxonomy_check_status: Inconclusive` and `below_threshold_mismatch` are normal
 there and are not grounds for relabelling on their own. Of 3,534 references in the
-mycobacteriaceae database, 38 carried a hard `mismatch`; all but the two listed here were
+mycobacteriaceae database, 46 carried a hard `mismatch`; all but the two listed here were
 explained by *Mycobacterium*/*Mycolicibacterium* reclassification, reciprocal synonym pairs, or
 complex members lacking a type strain. Automated ANI filtering at build time would do more harm
 than good.
@@ -137,6 +137,30 @@ batch; here the other ten members of the JCVI September 2017 *Shigella* batch we
 unrelated STs and needed nothing, but that is a result, not an assumption. The cheap signal that a
 correction is incomplete is a sub-dereplication-threshold cross-name pair surviving a rebuild: the
 corrected reference should have no near namesake left under a different name.
+
+**That signal has a benign class, so read it before acting on it.** The rebuilt mycobacteriaceae
+database has nine such pairs and not one is a submission error. The tightest is distance **zero**:
+`GCA_062013771.1` (*M. intracellulare*) and `GCA_055794805.1` (*M. paraintracellulare*), different
+biosamples from different submitters, yet NCBI gives each a `species_match` to its own declared
+name at 99.11% and 99.47% — which can only happen if the two type assemblies are themselves within
+the species threshold of each other. That is a synonym conflict in the taxonomy, not a wrong label,
+and the same goes for *M. timonense*/*M. bouchedurhonense* at 0.000041, the
+*marinum*/*pseudoshottsii*/*liflandii* trio, and *M. mungi* against *M. tuberculosis* variant
+*africanum*. The distinguishing question is not how close the pair is but whether each member
+matches *its own* type: in the *Shigella* case the suspect's nearest same-name reference was 150
+times further away than its nearest differently-named one, and MLST put it in a sequence type
+attested only among the other name. Where both names are genuinely defensible, the `--confusable`
+table doing its job — warning that the call could be either — is the correct outcome, not a
+correction row.
+
+Verification of the mycobacteriaceae rebuild, for the record: 3,728 references against 3,534
+deployed, 200 added and 6 dropped. Both corrected genomes disappeared entirely rather than being
+renamed, because once binned with their true relatives they were near-duplicates and dereplication
+dropped them — the deployed database had the right *names* after `apply_label_corrections.py`, but
+still carried the redundant sequences, and only a rebuild fixes the FASTA headers that script
+cannot touch. Scored against the same assembly report, the deployed reference set carries 46 hard
+`mismatch` records and the rebuilt set 44; the difference is exactly those two accessions, and none
+of the 200 new references brought a hard mismatch with it.
 
 **What `match_status` is worth.** For those 102 references, `subspecies_match` was never wrong (0 of
 13), so it is a sound positive signal. The converse is not: 55 of the 70 conclusive labels carrying
