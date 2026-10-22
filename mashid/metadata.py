@@ -14,7 +14,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from mashid import MashIDError
+from mashid.fileutil import sidecar_for
 from mashid.mash import SketchInfo
+from mashid.names import normalise_header as _normalise_header
+from mashid.names import open_table as _open_table
 from mashid.samples import strip_seq_extension
 from mashid.taxonomy import clean_comment, organism_from_comment
 
@@ -45,30 +48,12 @@ def accession_from_query_id(query_id: str) -> str:
     return strip_seq_extension(name) or name
 
 
+METADATA_SUFFIX = ".metadata.tsv"
+
+
 def sidecar_path(database: Path) -> Path:
     """'/db/foo.msh' -> '/db/foo.metadata.tsv'."""
-    database = Path(database)
-    stem = database.name[:-4] if database.name.endswith(".msh") else database.name
-    return database.with_name(stem + ".metadata.tsv")
-
-
-def _normalise_header(fieldnames: list[str] | None) -> dict[str, str]:
-    """Map lowercase, punctuation-free column names to the actual header names."""
-    if not fieldnames:
-        return {}
-    return {re.sub(r"[^a-z0-9]", "", f.lower()): f for f in fieldnames}
-
-
-def _open_table(path: Path):
-    try:
-        text = path.read_text(encoding="utf-8-sig")
-    except UnicodeDecodeError as exc:
-        raise MashIDError(f"{path} is not a UTF-8 text table: {exc}") from exc
-    lines = text.splitlines()
-    if not lines or not lines[0].strip():
-        raise MashIDError(f"{path} is empty")
-    delimiter = "\t" if "\t" in lines[0] else ","
-    return csv.DictReader(lines, delimiter=delimiter)
+    return sidecar_for(database, METADATA_SUFFIX)
 
 
 def read_metadata(path: Path) -> dict[str, DbEntry]:

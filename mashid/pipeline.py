@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import csv
-import hashlib
 import json
 import logging
 import platform
@@ -17,6 +16,7 @@ from pathlib import Path
 from mashid import MashIDError, __version__
 from mashid import confusable as confusable_mod
 from mashid.databases import REGISTRY, resolve_database
+from mashid.fileutil import md5sum
 from mashid.mash import ScreenHit, find_mash, info_table, mash_version, screen
 from mashid.metadata import (
     NA,
@@ -162,7 +162,8 @@ def hit_row(rank: int, hit: ScreenHit, metadata: dict[str, DbEntry] | None) -> d
 def annotate(result: SampleResult, metadata: dict[str, DbEntry] | None, ambiguity_margin: float,
              winner_take_all: bool = True,
              confusable: dict[str, list[confusable_mod.Neighbour]] | None = None) -> list[str]:
-    """Heuristic warnings for the summary: possible mixture, ambiguous call, low coverage.
+    """Heuristic warnings for the summary: possible mixture, ambiguous call, inseparable organisms,
+    low coverage.
 
     With winner-take-all (the default), hashes shared between references are credited to the best one,
     so a *different* organism that still scores >= MIXTURE_MIN_IDENTITY is supported by its own k-mers and
@@ -174,6 +175,8 @@ def annotate(result: SampleResult, metadata: dict[str, DbEntry] | None, ambiguit
     the hashes *unique* to it, which is not a similarity, and for near-identical references that number
     is small whether or not the call was a near-tie. "Not separable in this database" covers that case
     from ``confusable``, a property of the database computed once by ``make_mashID_db --confusable``.
+    Organisms already named by the mixture or ambiguity notes are left out of it, so that one
+    organism is not reported twice in the same line for two different reasons.
     """
     notes: list[str] = []
     top = result.top
@@ -346,28 +349,32 @@ def compute_stats(samples: list[Sample], parallel: int) -> None:
                 log.warning("Could not compute stats for %s: %s", sample.name, exc)
 
 
-def _md5(path: Path) -> str:
-    h = hashlib.md5()
-    with open(path, "rb") as fh:
-        for chunk in iter(lambda: fh.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
+def database_info(database: Path, metadata: dict[str, DbEntry] | None, md5: bool = True,
+                  metadata_file: Path | None = None, confusable_file: Path | None = None) -> dict:
+    """Provenance for the database a run used.
 
-
-def database_info(database: Path, metadata: dict[str, DbEntry] | None, md5: bool = True) -> dict:
+    ``metadata_file``/``confusable_file`` are the ``--db-metadata``/``--db-confusable`` overrides:
+    the Identification, TaxID and Note columns come from the tables actually read, so recording the
+    ones that happen to sit beside the ``.msh`` would assert the wrong provenance (and ``null``
+    for a table that demonstrably produced output).
+    """
     registry_name = next((n for n, r in REGISTRY.items() if r.filename == database.name), None)
-    info = {
+
+    def used(override: Path | None, beside: Path) -> str | None:
+        if override is not None:
+            return str(override)
+        return str(beside) if beside.is_file() else None
+
+    return {
         "path": str(database),
         "name": registry_name,
         "size_bytes": database.stat().st_size,
-        "md5": _md5(database) if md5 else None,
+        "md5": md5sum(database) if md5 else None,
         "references": len(metadata) if metadata else None,
-        "metadata_file": str(sidecar_path(database)) if sidecar_path(database).is_file() else None,
+        "metadata_file": used(metadata_file, sidecar_path(database)),
         # The Note column depends on this table, so it belongs in the run's provenance.
-        "confusable_file": (str(confusable_mod.confusable_path(database))
-                            if confusable_mod.confusable_path(database).is_file() else None),
+        "confusable_file": used(confusable_file, confusable_mod.confusable_path(database)),
     }
-    return info
 
 
 def write_run_info(path: Path, settings: Settings, database: Path, metadata: dict[str, DbEntry] | None,
@@ -396,11 +403,14 @@ def write_run_info(path: Path, settings: Settings, database: Path, metadata: dic
             "ambiguity_margin": settings.ambiguity_margin,
             "min_ref_length": settings.min_ref_length,
             "skip_stats": settings.skip_stats,
+            "db_metadata": str(settings.db_metadata) if settings.db_metadata else None,
+            "db_confusable": str(settings.db_confusable) if settings.db_confusable else None,
             "threads": settings.threads,
             "parallel": settings.parallel,
             "fail_on": settings.fail_on,
         },
-        "database": database_info(database, metadata),
+        "database": database_info(database, metadata, metadata_file=settings.db_metadata,
+                                  confusable_file=settings.db_confusable),
         "samples": [{"name": s.name, "type": s.seq_type, "files": [str(f) for f in s.files]} for s in samples],
     }
     with open(path, "w") as fh:

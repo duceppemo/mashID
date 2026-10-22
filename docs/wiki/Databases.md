@@ -149,27 +149,50 @@ scripts/reannotate_summary.py /path/to/results --dry-run   # then without --dry-
 ```
 
 rebuilds their summary files from the per-sample tables and the current sidecars, which is also how
-to apply a corrected organism name to results that predate the correction. Names are compared as
-organisms, not as strings, so `Genus sp.` placeholders and the
-same epithet under two genera (*Mycobacterium*/*Mycobacteroides abscessus*) are not reported as
-conflicts.
+to apply a corrected organism name to results that predate the correction.
 
-A name and a rank below it *are* reported, which is two thirds of the rows for `mycobacteriaceae`
-(1306 of 1993). Some of those pairs are the most important thing the table has to say —
-*M. tuberculosis* against *M. tuberculosis* variant *bovis* is the second row above — while others
-are merely redundant, such as *Mycobacteroides abscessus* against *M. abscessus* subsp. *abscessus*.
-The two are the same shape and cannot be told apart without a taxonomy, so both are kept: a
-redundant line in a note costs little, and suppressing the shape would hide the bovis case.
+### Which names count as different organisms
+
+Names are compared as taxonomic claims, not as strings. A name is read as a chain of ranks, and a
+pair is reported only when the two chains genuinely disagree:
+
+| Pair | Reported | Why |
+| --- | --- | --- |
+| *Mycolicibacterium goodii* / *M. wolinskyi* | yes | two species |
+| *M. tuberculosis* / *M. tuberculosis* variant *bovis* | yes | NCBI uses `variant` where it used to use species: *M. bovis*, *M. africanum*, *M. microti* and *M. caprae* are all "variants" now, and they are what a reader still means by different organisms |
+| *Mycobacteroides abscessus* subsp. *abscessus* / subsp. *massiliense* | yes | two subspecies of one species disagree with each other |
+| *Mycobacterium avium* / *M. avium* subsp. *hominissuis* | no | one is the other at a finer rank; a sample that is the subspecies is also, correctly, the species |
+| *Mycobacterium abscessus* / *Mycobacteroides abscessus* | no | a renamed genus, not a second organism |
+| *Escherichia coli* / *E. coli* O157:H7 | no | a strain designation below the species |
+| *Mycobacterium fortuitum* / *Mycobacterium* sp. | no | `Genus sp.` claims no species, so it contradicts none |
+| `[Mycobacterium] chelonae` / *Mycobacterium chelonae* | no | brackets, `Candidatus` and letter case are notation, not taxonomy |
+
+Letting a species pair with its own subspecies was two fifths of the rows of the `mycobacteriaceae`
+table (767 of 1,993) and the two commonest notes the database produced — "*M. avium* subsp.
+*hominissuis* not separable from *M. avium*" and the *abscessus* equivalent — neither of which tells
+anyone anything. Reading the ranks instead leaves 1,226 rows over 313 references rather than 945,
+and keeps every pair that matters, the whole *M. tuberculosis* complex among them.
+
+The suppression is symmetric: a call of *M. avium* is not told it could be *M. avium* subsp. *avium*
+either. That direction is a statement about resolution rather than about a competing organism —
+mashID calls species, and a reference named only to species cannot place a sample below it — and
+keeping it would have left most of the noise in place, since the plain species name is the one most
+references carry.
+
+The rule is applied both when the table is written and when a note is built from it, so a table
+produced by an earlier version, or by hand, cannot reintroduce those rows.
+
+### Cost, and reading the table for mislabels
 
 It is an all-pairs comparison, so cost grows with the square of the reference count: 3,534
-references of `mycobacteriaceae` take under two minutes and 850 MB and flag 945 references, but a
-database with hundreds of thousands of references is a different proposition. This is why it is a
-separate step rather than part of every build.
+references of `mycobacteriaceae` take under two minutes and 850 MB, but a database with hundreds of
+thousands of references is a different proposition. This is why it is a separate step rather than
+part of every build.
 
 Read the table top-down and it doubles as the sharpest mislabel detector available: a reference
 named for one species sitting a hair from another species' references is either a genuinely
 inseparable pair or a bad label. Both mislabelled `mycobacteriaceae` references were in the first 20
-of 2,102 rows, `GCA_025822535.1` at rank 4.
+of the 2,102 rows the table had before they were corrected, `GCA_025822535.1` at rank 4.
 
 ## Correcting a mislabelled reference
 
@@ -204,6 +227,9 @@ On an existing database, rewrite the sidecar and `bins.tsv` in place — no re-s
 scripts/apply_label_corrections.py curation/label_corrections.tsv \
     ~/.local/share/mashID/db/<db>.metadata.tsv <build_dir>/bins.tsv
 ```
+
+Add `--rank subspecies` or `--rank serovar` when the `bins.tsv` was binned below species, so the
+corrected row's bin keeps the rank the others have. A `<db>.confusable.tsv` can be a target too.
 
 `Identification` and `TaxID` are then correct. `Description` comes from the reference's own fasta
 header by way of the sketch, so it keeps the deposited name until the database is rebuilt.

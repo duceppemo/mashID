@@ -98,6 +98,51 @@ def test_annotate_reports_inseparable_organisms_from_the_database():
         ["Possible mixture with: Genusb two", NOTE_PREFIX + "Genusd four"]
 
 
+def test_database_info_records_the_sidecars_actually_used(tmp_path):
+    """--db-metadata / --db-confusable drive Identification, TaxID and Note, so recording whatever
+    happens to sit beside the .msh would assert the wrong provenance."""
+    from mashid.confusable import confusable_path
+    from mashid.metadata import sidecar_path
+    from mashid.pipeline import database_info
+    db = tmp_path / "db.msh"
+    db.write_bytes(b"not really a sketch")
+    sidecar_path(db).write_text("Accession\tOrganism\nA1\tGenusa one\n")
+    confusable_path(db).write_text("Accession\tOrganism\tConfusable_Organism\tDistance\n")
+
+    beside = database_info(db, None, md5=False)
+    assert beside["metadata_file"] == str(sidecar_path(db))
+    assert beside["confusable_file"] == str(confusable_path(db))
+
+    elsewhere = tmp_path / "other.tsv"
+    other_conf = tmp_path / "other.confusable.tsv"
+    used = database_info(db, None, md5=False, metadata_file=elsewhere, confusable_file=other_conf)
+    assert used["metadata_file"] == str(elsewhere)
+    assert used["confusable_file"] == str(other_conf)
+
+    # and nothing is claimed when neither exists
+    bare = tmp_path / "bare.msh"
+    bare.write_bytes(b"x")
+    empty = database_info(bare, None, md5=False)
+    assert empty["metadata_file"] is None and empty["confusable_file"] is None
+
+
+def test_run_info_records_the_sidecar_overrides(tmp_path, monkeypatch):
+    import json
+
+    from mashid import pipeline
+    from mashid.pipeline import Settings, write_run_info
+    monkeypatch.setattr(pipeline, "mash_version", lambda exe: "2.3")
+    db = tmp_path / "db.msh"
+    db.write_bytes(b"not really a sketch")
+    settings = Settings(input=tmp_path, output=tmp_path, database=db,
+                        db_metadata=tmp_path / "m.tsv", db_confusable=tmp_path / "c.tsv")
+    path = tmp_path / "mashID_run.json"
+    write_run_info(path, settings, db, None, [], "mash", 0.0, 0)
+    params = json.loads(path.read_text())["parameters"]
+    assert params["db_metadata"] == str(tmp_path / "m.tsv")
+    assert params["db_confusable"] == str(tmp_path / "c.tsv")
+
+
 def test_database_wide_note_does_not_trip_fail_on_note():
     from mashid.confusable import NOTE_PREFIX
     from mashid.pipeline import actionable_notes, exit_code_for

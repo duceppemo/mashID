@@ -8,6 +8,10 @@ to that reference, not a similarity, so the gap between the top two hits cannot 
 
 The same table is the most direct evidence of a mislabelled reference: a genome named for one species
 sitting a hair away from the references of another is either an inseparable pair or a bad label.
+
+Which name pairs count as different organisms is decided by ``mashid.names.distinguishable()``,
+which reads a name as a chain of ranks: a species and a subspecies of it make the same claim, so
+pairing them says nothing, while two subspecies of one species disagree and are worth a note.
 """
 
 from __future__ import annotations
@@ -18,8 +22,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from mashid import MashIDError
+from mashid.fileutil import sidecar_for
 from mashid.mash import dist_pairs
-from mashid.metadata import NA, DbEntry, accession_from_query_id
+from mashid.metadata import NA, DbEntry, accession_from_query_id, lookup, sidecar_path
+from mashid.names import distinguishable, open_table
 
 log = logging.getLogger(__name__)
 
@@ -29,47 +35,20 @@ DEFAULT_MAX_DISTANCE = 0.005
 CONFUSABLE_SUFFIX = ".confusable.tsv"
 COLUMNS = ["Accession", "Organism", "Confusable_Organism", "Distance", "Nearest_Accession"]
 
-# Species placeholders: an unnamed reference makes no claim to a species, so it cannot contradict one.
-PLACEHOLDER_SPECIES = {"sp.", "sp", "spp.", "bacterium", "unknown"}
 MAX_NAMES_IN_NOTE = 3
 
 # This note states a property of the database that holds for every sample hitting that reference, so
 # it says nothing about the sample and does not count towards --fail-on note.
 NOTE_PREFIX = "Not separable in this database from: "
 
+__all__ = ["CONFUSABLE_SUFFIX", "COLUMNS", "DEFAULT_MAX_DISTANCE", "MAX_NAMES_IN_NOTE",
+           "NOTE_PREFIX", "Neighbour", "compute", "confusable_path", "distinguishable", "load",
+           "note_for", "read", "write"]
+
 
 def confusable_path(database: Path) -> Path:
     """``/x/db.msh`` -> ``/x/db.confusable.tsv``."""
-    database = Path(database)
-    stem = database.name[:-4] if database.name.endswith(".msh") else database.name
-    return database.with_name(stem + CONFUSABLE_SUFFIX)
-
-
-def _binomial(organism: str) -> tuple[str, str] | None:
-    """(genus, species epithet) of a Latin binomial, or None if the name is not one."""
-    tokens = organism.replace("[", "").replace("]", "").split()
-    if tokens[:1] == ["Candidatus"]:
-        tokens = tokens[1:]
-    if len(tokens) < 2 or tokens[1] in PLACEHOLDER_SPECIES:
-        return None
-    return tokens[0], tokens[1]
-
-
-def distinguishable(a: str, b: str) -> bool:
-    """True when ``a`` and ``b`` are claims about genuinely different organisms.
-
-    False for identical names, for names without a usable species (an unnamed "Genus sp." reference
-    contradicts nothing), and for the same species epithet under two genera, which in practice means
-    a renamed genus rather than two organisms (Mycobacterium abscessus / Mycobacteroides abscessus).
-    """
-    a, b = a.strip(), b.strip()
-    if not a or not b or a in (NA, "unknown") or b in (NA, "unknown") or a == b:
-        return False
-    bin_a, bin_b = _binomial(a), _binomial(b)
-    if bin_a is None or bin_b is None:
-        return False
-    # The same epithet under two genera is a renamed genus, not a second organism.
-    return not (bin_a[1] == bin_b[1] and bin_a[0] != bin_b[0])
+    return sidecar_for(database, CONFUSABLE_SUFFIX)
 
 
 @dataclass(frozen=True)
@@ -96,22 +75,29 @@ def compute(database: Path, metadata: dict[str, DbEntry], threads: int = 1,
 
     def organism_of(query_id: str) -> tuple[str, str]:
         accession = accession_from_query_id(query_id)
-        entry = metadata.get(accession)
+        # lookup(), not metadata.get(): it also matches a sidecar accession whose version differs,
+        # which is what the rest of the pipeline does when it names the same reference.
+        entry = lookup(metadata, accession)
         return accession, (entry.organism if entry is not None else NA)
 
     best: dict[str, dict[str, Neighbour]] = {}
     unnamed: set[str] = set()
-    pairs = seen = 0
+    # ``mash dist db db`` emits every pair in both orders, so count unordered pairs to report.
+    compared: set[tuple[str, str]] = set()
+    cross: set[tuple[str, str]] = set()
     for id_a, id_b, distance in dist_pairs(database, database, threads, max_distance, exe):
-        seen += 1
         acc_a, org_a = organism_of(id_a)
         acc_b, org_b = organism_of(id_b)
         for acc, org in ((acc_a, org_a), (acc_b, org_b)):
             if org == NA:
                 unnamed.add(acc)
-        if acc_a == acc_b or not distinguishable(org_a, org_b):
+        if acc_a == acc_b:
             continue
-        pairs += 1
+        pair = (acc_a, acc_b) if acc_a < acc_b else (acc_b, acc_a)
+        compared.add(pair)
+        if not distinguishable(org_a, org_b):
+            continue
+        cross.add(pair)
         for acc, other_acc, other_org in ((acc_a, acc_b, org_b), (acc_b, acc_a, org_a)):
             current = best.setdefault(acc, {}).get(other_org)
             if current is None or distance < current.distance:
@@ -123,7 +109,7 @@ def compute(database: Path, metadata: dict[str, DbEntry], threads: int = 1,
                     "and were skipped (for example %s); refresh it with make_mashID_db --annotate",
                     len(unnamed), ", ".join(sorted(unnamed)[:3]))
     log.info("Compared %d reference pair(s) within distance %g; %d cross-organism pair(s) over %d "
-             "reference(s)", seen, max_distance, pairs, len(best))
+             "reference(s)", len(compared), max_distance, len(cross), len(best))
     return {acc: sorted(n.values(), key=lambda x: (x.distance, x.organism))
             for acc, n in sorted(best.items())}
 
@@ -133,13 +119,13 @@ def write(path: Path, neighbours: dict[str, list[Neighbour]], metadata: dict[str
     path = Path(path)
     rows = []
     for accession, items in neighbours.items():
-        entry = metadata.get(accession)
+        entry = lookup(metadata, accession)
         organism = entry.organism if entry is not None else NA
         rows.extend({"Accession": accession, "Organism": organism,
                      "Confusable_Organism": n.organism, "Distance": f"{n.distance:.6f}",
                      "Nearest_Accession": n.accession} for n in items)
     rows.sort(key=lambda r: (float(r["Distance"]), r["Accession"], r["Confusable_Organism"]))
-    with path.open("w", newline="") as fh:
+    with path.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=COLUMNS, delimiter="\t", lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
@@ -153,22 +139,23 @@ def read(path: Path) -> dict[str, list[Neighbour]]:
     if not path.is_file():
         raise MashIDError(f"Confusable-reference table not found: {path}")
     out: dict[str, list[Neighbour]] = {}
-    with path.open(newline="") as fh:
-        reader = csv.DictReader(fh, delimiter="\t")
-        missing = {"Accession", "Confusable_Organism", "Distance"} - set(reader.fieldnames or [])
-        if missing:
-            raise MashIDError(f"{path}: missing column(s) {', '.join(sorted(missing))}")
-        for row in reader:
-            accession = (row.get("Accession") or "").strip()
-            organism = (row.get("Confusable_Organism") or "").strip()
-            if not accession or not organism:
-                continue
-            try:
-                distance = float(row.get("Distance") or "")
-            except ValueError:
-                continue
-            out.setdefault(accession, []).append(
-                Neighbour(organism, distance, (row.get("Nearest_Accession") or "").strip()))
+    # open_table(), not path.open(): a hand-curated --db-confusable file may carry a BOM (Excel
+    # writes one) or a stray non-UTF-8 byte, and both deserve the same treatment as the sidecar.
+    reader = open_table(path)
+    missing = {"Accession", "Confusable_Organism", "Distance"} - set(reader.fieldnames or [])
+    if missing:
+        raise MashIDError(f"{path}: missing column(s) {', '.join(sorted(missing))}")
+    for row in reader:
+        accession = (row.get("Accession") or "").strip()
+        organism = (row.get("Confusable_Organism") or "").strip()
+        if not accession or not organism:
+            continue
+        try:
+            distance = float(row.get("Distance") or "")
+        except ValueError:
+            continue
+        out.setdefault(accession, []).append(
+            Neighbour(organism, distance, (row.get("Nearest_Accession") or "").strip()))
     for items in out.values():
         items.sort(key=lambda x: (x.distance, x.organism))
     return out
@@ -185,22 +172,35 @@ def load(database: Path, override: Path | None) -> dict[str, list[Neighbour]] | 
         return None
     table = read(path)
     log.info("Loaded inseparable-organism pairs for %d reference(s) from %s", len(table), path)
-    if path.stat().st_mtime < Path(database).stat().st_mtime:
-        log.warning("%s is older than the database; if the database was rebuilt, refresh it with "
-                    "make_mashID_db --confusable", path.name)
+    # The table records organism *names*, so relabelling a reference dates it just as surely as
+    # re-sketching does -- and scripts/apply_label_corrections.py exists to rewrite the sidecar
+    # without touching the .msh. Compare against whichever of the two is newer.
+    newer = max((p.stat().st_mtime for p in (Path(database), sidecar_path(database)) if p.is_file()),
+                default=0.0)
+    if path.stat().st_mtime < newer:
+        log.warning("%s is older than the database or its metadata sidecar; if either changed, "
+                    "refresh it with make_mashID_db --confusable", path.name)
     return table
 
 
 def note_for(accession: str, organism: str, table: dict[str, list[Neighbour]] | None,
              exclude: set[str] | None = None) -> str | None:
-    """The summary note for a top hit, or None when the database separates it from everything else."""
+    """The summary note for a top hit, or None when the database separates it from everything else.
+
+    Names are filtered through ``distinguishable()`` here as well as when the table is computed, so
+    that a table built by an older version -- or by hand -- cannot report a name that is only the
+    call itself at another rank.
+    """
     if not table:
         return None
-    skip = {organism} | (exclude or set())
+    exclude = exclude or set()
     names: list[str] = []
     for neighbour in table.get(accession, []):
-        if neighbour.organism not in skip and neighbour.organism not in names:
-            names.append(neighbour.organism)
+        if neighbour.organism in exclude or neighbour.organism in names:
+            continue
+        if not distinguishable(organism, neighbour.organism):
+            continue
+        names.append(neighbour.organism)
     if not names:
         return None
     shown = names[:MAX_NAMES_IN_NOTE]

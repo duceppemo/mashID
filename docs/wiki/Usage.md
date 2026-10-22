@@ -33,7 +33,7 @@ usage: mashID [-h] -i PATH -o DIR [-d FILE.msh|NAME] [--db-metadata FILE.tsv]
 | `--ambiguity-margin 0.005` | Flag a sample as ambiguous when a different organism scores within this identity margin of the top hit. |
 | `--min-ref-length BP\|auto` | Ignore hits to references shorter than this many bp. `auto` (default) uses 100000 unless most references of the database are shorter, as in a viral or plasmid database, in which case nothing is filtered. `0` keeps all hits. |
 | `--skip-stats` | Do not count reads/bases of the input files. |
-| `--fail-on {none,no-hit,note}` | Exit with code 2 when any sample has no hit, or has any note or no hit. For pipelines. |
+| `--fail-on {none,no-hit,note}` | Exit with code 2 when any sample has no hit, or has no hit or a note about itself. `note` counts the mixture, ambiguity and low-coverage notes, not the database-wide `Not separable` one. For pipelines. |
 
 ### performance
 

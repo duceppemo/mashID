@@ -111,6 +111,20 @@ def test_note_caps_the_list_and_counts_the_rest():
     assert note.count(",") == 2
 
 
+def test_note_drops_a_name_that_is_only_the_call_at_another_rank():
+    """A table written by an older version carries parent/child rows; the note must not repeat them."""
+    table = {"GCA_1.1": [Neighbour("Mycobacterium avium", 0.001, "GCA_2.1"),
+                         Neighbour("Mycobacterium avium subsp. avium", 0.002, "GCA_3.1")]}
+    note = note_for("GCA_1.1", "Mycobacterium avium subsp. hominissuis", table)
+    assert note == NOTE_PREFIX + "Mycobacterium avium subsp. avium"
+
+
+def test_note_keeps_an_mtbc_variant_against_the_bare_species():
+    table = {"GCA_1.1": [Neighbour("Mycobacterium tuberculosis", 0.001, "GCA_2.1")]}
+    assert note_for("GCA_1.1", "Mycobacterium tuberculosis variant bovis", table) == (
+        NOTE_PREFIX + "Mycobacterium tuberculosis")
+
+
 def test_note_is_none_when_nothing_to_say():
     table = {"GCA_1.1": [Neighbour("Genusa two", 0.001, "GCA_2.1")]}
     assert note_for("GCA_9.9", "Genusa one", table) is None       # reference not in the table
@@ -146,6 +160,37 @@ def test_load_warns_when_the_table_predates_the_database(tmp_path, caplog):
     assert "older than the database" in caplog.text
 
 
+def test_load_warns_when_the_table_predates_the_metadata_sidecar(tmp_path, caplog):
+    """apply_label_corrections.py rewrites the sidecar and leaves the .msh alone, so comparing the
+    table against the sketch alone would never notice a relabelled reference."""
+    import os
+
+    from mashid.confusable import load
+    from mashid.metadata import sidecar_path
+    db = tmp_path / "db.msh"
+    db.write_bytes(b"not really a sketch")
+    table = confusable_path(db)
+    write(table, {"GCA_1.1": [Neighbour("Genusa two", 0.001, "GCA_2.1")]}, _metadata())
+    sidecar = sidecar_path(db)
+    sidecar.write_text("Accession\tOrganism\nGCA_1.1\tGenusa one\n")
+    os.utime(db, (1, 1))                               # sketch old, sidecar newer than the table
+    os.utime(table, (100, 100))
+    os.utime(sidecar, (200, 200))
+    with caplog.at_level("WARNING"):
+        assert load(db, None) is not None
+    assert "metadata sidecar" in caplog.text
+
+
+def test_read_accepts_a_bom_and_rejects_bad_bytes(tmp_path):
+    p = tmp_path / "db.confusable.tsv"
+    header = "Accession\tOrganism\tConfusable_Organism\tDistance\tNearest_Accession\n"
+    p.write_bytes(("﻿" + header + "GCA_1.1\tGenusa one\tGenusa two\t0.001\tGCA_2.1\n").encode())
+    assert list(read(p)) == ["GCA_1.1"]                # the BOM must not hide the first column
+    p.write_bytes(header.encode() + b"GCA_1.1\tCaf\xe9\tGenusa two\t0.001\tGCA_2.1\n")
+    with pytest.raises(MashIDError, match="not a UTF-8 text table"):
+        read(p)
+
+
 def test_an_empty_table_is_not_an_error(tmp_path):
     from mashid.confusable import load
     db = tmp_path / "db.msh"
@@ -156,13 +201,67 @@ def test_an_empty_table_is_not_an_error(tmp_path):
     assert note_for("GCA_1.1", "Genusa one", table) is None
 
 
-def test_confusable_distance_must_be_positive(tmp_path):
+@pytest.mark.parametrize("distance", [0.0, -0.1, 1.5])
+def test_confusable_distance_must_be_a_mash_distance(tmp_path, distance):
     from mashid.makedb import confusable_database
     db = tmp_path / "db.msh"
     db.write_bytes(b"not really a sketch")
     write(confusable_path(db), {}, _metadata())
-    with pytest.raises(MashIDError, match="greater than 0"):
-        confusable_database(db, None, 1, 0.0)
+    # Checked before find_mash() and before the sidecar is read, so an impossible distance does not
+    # cost minutes of all-pairs work first.
+    with pytest.raises(MashIDError, match=r"must be a Mash distance in \(0, 1\]"):
+        confusable_database(db, None, 1, distance)
+
+
+@pytest.mark.parametrize("value", ["0", "2", "-1", "notanumber"])
+def test_confusable_distance_is_rejected_at_parse_time(value, capsys):
+    """mash rejects it too, but only after find_mash(), the file checks and the sidecar read."""
+    from mashid.makedb import build_parser
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(["--confusable", "db.msh", "--confusable-distance", value])
+    assert "--confusable-distance" in capsys.readouterr().err
+
+
+def test_annotate_and_confusable_run_together_in_that_order(monkeypatch, tmp_path):
+    """They used to be mutually exclusive without saying so: --confusable won and then advised
+    running --annotate, which the same command line had already asked for."""
+    from mashid import makedb
+    db = tmp_path / "db.msh"
+    db.write_bytes(b"not really a sketch")
+    names = tmp_path / "names.tsv"
+    names.write_text("Accession\tOrganism\nGCA_1.1\tGenusa one\n")
+    calls = []
+    monkeypatch.setattr(makedb, "annotate_database",
+                        lambda *a: calls.append(("annotate", a)) or a[0])
+    monkeypatch.setattr(makedb, "confusable_database",
+                        lambda *a: calls.append(("confusable", a)) or a[0])
+    assert makedb.main(["--annotate", str(db), "--confusable", str(db),
+                        "--metadata", str(names)]) == 0
+    assert [c[0] for c in calls] == ["annotate", "confusable"]
+    assert calls[0][1][1] == names          # --annotate uses the given names
+    assert calls[1][1][1] is None           # --confusable then reads the sidecar they produced
+
+
+def test_confusable_warns_when_names_come_from_elsewhere(tmp_path, caplog, monkeypatch):
+    """The table records organism names and mashID reads them back from the sidecar, so names from
+    a third file can disagree with what every run will report."""
+    from mashid import confusable as mod
+    from mashid import makedb
+    from mashid.metadata import sidecar_path
+    db = tmp_path / "db.msh"
+    db.write_bytes(b"not really a sketch")
+    sidecar_path(db).write_text("Accession\tOrganism\nGCA_1.1\tGenusa one\n")
+    other = tmp_path / "other.tsv"
+    other.write_text("Accession\tOrganism\nGCA_1.1\tGenusa zebra\n")
+    monkeypatch.setattr(makedb, "find_mash", lambda: "mash")
+    monkeypatch.setattr(mod, "compute", lambda *a, **k: {})
+    with caplog.at_level("WARNING"):
+        makedb.confusable_database(db, other, 1, 0.005)
+    assert "mashID identifies references from db.metadata.tsv" in caplog.text
+    caplog.clear()
+    with caplog.at_level("WARNING"):
+        makedb.confusable_database(db, sidecar_path(db), 1, 0.005)
+    assert caplog.text == ""                # the database's own sidecar is not worth a warning
 
 
 # --- mash dist streaming ------------------------------------------------------------------------
@@ -259,7 +358,42 @@ def test_compute_skips_self_pairs_same_names_and_synonyms(monkeypatch, tmp_path)
              ("/db/GCA_1.1.fna", "/db/GCA_5.1.fna", 0.002)]
     out = _compute_with(monkeypatch, tmp_path, pairs, meta)
     assert list(out) == ["GCA_1.1", "GCA_5.1"]
-    assert [n.organism for n in out["GCA_1.1"]] == ["Genusa five"]
+
+
+def test_compute_counts_each_unordered_pair_once(monkeypatch, tmp_path, caplog):
+    """``mash dist db db`` emits every pair in both orders, which doubled both logged counters."""
+    meta = {"GCA_1.1": DbEntry("GCA_1.1", "Genusa one"),
+            "GCA_2.1": DbEntry("GCA_2.1", "Genusa two")}
+    pairs = [("/db/GCA_1.1.fna", "/db/GCA_1.1.fna", 0.0),
+             ("/db/GCA_2.1.fna", "/db/GCA_2.1.fna", 0.0),
+             ("/db/GCA_1.1.fna", "/db/GCA_2.1.fna", 0.001),
+             ("/db/GCA_2.1.fna", "/db/GCA_1.1.fna", 0.001)]
+    with caplog.at_level("INFO"):
+        out = _compute_with(monkeypatch, tmp_path, pairs, meta)
+    assert list(out) == ["GCA_1.1", "GCA_2.1"]
+    assert "Compared 1 reference pair(s)" in caplog.text
+    assert "1 cross-organism pair(s) over 2 reference(s)" in caplog.text
+
+
+def test_compute_names_a_reference_whose_sidecar_version_differs(monkeypatch, tmp_path):
+    """lookup() falls back to a version-less match; metadata.get() did not, and the pair vanished."""
+    meta = {"GCA_1.2": DbEntry("GCA_1.2", "Genusa one"),
+            "GCA_2.1": DbEntry("GCA_2.1", "Genusa two")}
+    pairs = [("/db/GCA_1.1.fna", "/db/GCA_2.1.fna", 0.001)]
+    out = _compute_with(monkeypatch, tmp_path, pairs, meta)
+    assert [n.organism for n in out["GCA_1.1"]] == ["Genusa two"]
+    assert [n.organism for n in out["GCA_2.1"]] == ["Genusa one"]
+
+
+def test_compute_skips_a_name_that_is_only_the_other_at_a_finer_rank(monkeypatch, tmp_path):
+    meta = {"GCA_1.1": DbEntry("GCA_1.1", "Mycobacterium avium"),
+            "GCA_2.1": DbEntry("GCA_2.1", "Mycobacterium avium subsp. hominissuis"),
+            "GCA_3.1": DbEntry("GCA_3.1", "Mycobacterium avium subsp. avium")}
+    pairs = [("/db/GCA_1.1.fna", "/db/GCA_2.1.fna", 0.001),      # parent/child: nothing to say
+             ("/db/GCA_2.1.fna", "/db/GCA_3.1.fna", 0.002)]      # two subspecies: a real pair
+    out = _compute_with(monkeypatch, tmp_path, pairs, meta)
+    assert list(out) == ["GCA_2.1", "GCA_3.1"]
+    assert [n.organism for n in out["GCA_2.1"]] == ["Mycobacterium avium subsp. avium"]
 
 
 def test_compute_warns_about_references_missing_from_the_sidecar(monkeypatch, tmp_path, caplog):

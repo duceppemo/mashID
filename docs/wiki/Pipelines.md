@@ -20,8 +20,13 @@ LIMS ends up next to the identification.
 | --- | --- |
 | 0 | Completed. |
 | 1 | Error: bad input, missing database, Mash failure. |
-| 2 | `--fail-on no-hit`: a sample had no hit; `--fail-on note`: a sample had a note or no hit. |
+| 2 | `--fail-on no-hit`: a sample had no hit; `--fail-on note`: a sample had no hit or a note about itself. |
 | 130 | Interrupted. |
+
+`--fail-on note` counts the notes that describe the sample — possible mixture, ambiguous call, low
+coverage. It deliberately does not count `Not separable in this database from: ...`, which states a
+property of the database and would otherwise fire on every sample of a close group
+(see [Outputs](Outputs#the-note-column)).
 
 `--fail-on` lets a pipeline stop, or route samples to review, without parsing tables.
 

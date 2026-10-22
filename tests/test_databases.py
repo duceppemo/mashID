@@ -156,6 +156,58 @@ def test_download_fetches_the_confusable_sidecar(monkeypatch, tmp_path, http_fil
         download("badconf", dest_dir)
 
 
+def test_no_verify_still_refreshes_the_sidecars(monkeypatch, tmp_path, http_file):
+    """--no-verify skips hashing a 284 MB sketch. It must not leave a new confusable table beside
+    the deposited names it was computed to replace."""
+    url, payload, md5 = http_file
+    meta_bytes = b"Accession\tOrganism\tTaxID\nX1\tGenusa one\t7\n"
+    conf_bytes = (b"Accession\tOrganism\tConfusable_Organism\tDistance\tNearest_Accession\n"
+                  b"X1\tGenusa one\tGenusa two\t0.001000\tX2\n")
+    (tmp_path / "served" / "fake.confusable.tsv").write_bytes(conf_bytes)
+    remote = RemoteDatabase("nv", "fake.msh", url, md5, len(payload), "t", "d",
+                            metadata_url=url.replace("fake.msh", "fake.metadata.tsv"),
+                            metadata_md5=hashlib.md5(meta_bytes).hexdigest(),
+                            metadata_size=len(meta_bytes),
+                            confusable_url=url.replace("fake.msh", "fake.confusable.tsv"),
+                            confusable_md5=hashlib.md5(conf_bytes).hexdigest(),
+                            confusable_size=len(conf_bytes))
+    monkeypatch.setitem(REGISTRY, "nv", remote)
+    dest_dir = tmp_path / "dbs"
+    dest_dir.mkdir()
+    (dest_dir / "fake.msh").write_bytes(payload)
+    (dest_dir / "fake.metadata.tsv").write_text("Accession\tOrganism\nX1\tDeposited name\n")
+    (dest_dir / "fake.confusable.tsv").write_text("stale")
+    download("nv", dest_dir, verify=False)
+    assert (dest_dir / "fake.metadata.tsv").read_bytes() == meta_bytes
+    assert (dest_dir / "fake.confusable.tsv").read_bytes() == conf_bytes
+
+
+def test_a_truncated_transfer_is_a_clean_error(monkeypatch, tmp_path, http_file):
+    """http.client.IncompleteRead is neither a URLError nor an OSError, so it used to traceback."""
+    import http.client
+    import urllib.request
+
+    url, payload, md5 = http_file
+    monkeypatch.setitem(REGISTRY, "cut", RemoteDatabase("cut", "cut.msh", url, md5, len(payload),
+                                                        "t", "d"))
+
+    class Cut:
+        def read(self, _n):
+            raise http.client.IncompleteRead(b"half")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: Cut())
+    dest_dir = tmp_path / "dbs"
+    with pytest.raises(MashIDError, match="failed"):
+        download("cut", dest_dir)
+    assert not list(dest_dir.glob("*.part"))          # no orphaned partial download left behind
+
+
 def test_download_skips_a_confusable_sidecar_that_is_not_published(monkeypatch, tmp_path, http_file):
     """Every registry entry today has no confusable_url; nothing must be fetched or demanded."""
     url, payload, md5 = http_file

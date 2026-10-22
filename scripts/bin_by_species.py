@@ -11,12 +11,15 @@ scaffold and contig level, so dereplication of huge species (Salmonella, E. coli
 --corrections overrides the organism name NCBI reports for named accessions, so a genome deposited
 under the wrong species is binned (and dereplicated) with its true relatives.
 A summary of bins and sizes is printed; the accession -> bin table is written to binned/bins.tsv.
+
+Bin names and the corrections table are read through mashid's own helpers, so that this script,
+apply_label_corrections.py and mashID itself cannot disagree about them; install the package from
+the repository root first (``pip install -e .``).
 """
 
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 import os
 import re
@@ -25,58 +28,23 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+try:
+    from mashid import MashIDError
+    from mashid.names import BIN_RANKS, normalise_header, species_of
+    from mashid.names import read_corrections as _read_corrections
+except ImportError as exc:  # an installed mashid older than this script, or none at all
+    sys.exit(f"error: this script needs the mashid package it ships with, but importing it failed "
+             f"({exc}).\nInstall the matching version from the repository root: pip install -e .")
 
-def species_of(organism: str, rank: str = "species") -> str:
-    tokens = organism.replace("[", "").replace("]", "").split()
-    if not tokens:
-        return "unknown"
-    if tokens[0] == "Candidatus" and len(tokens) >= 3:
-        tokens = ["Candidatus_" + tokens[1]] + tokens[2:]
-    genus = tokens[0]
-    species = tokens[1] if len(tokens) > 1 else "sp"
-    if species in ("sp.", "sp", "spp.", "bacterium"):
-        species = "sp"
-    name = f"{genus}_{species}"
-    if rank in ("subspecies", "serovar"):
-        m = re.search(r"subsp\.? (\S+)", organism)
-        if m:
-            name += f"_subsp_{m.group(1)}"
-    if rank == "serovar":
-        m = re.search(r"serovar (\S+)", organism)
-        if m:
-            name += f"_serovar_{m.group(1)}"
-    return re.sub(r"[^A-Za-z0-9_.:,\[\]-]", "_", name)
-
-
-def normalise_header(fieldnames: list[str] | None) -> dict[str, str]:
-    """Map lowercase, punctuation-free column names to the actual header names."""
-    return {re.sub(r"[^a-z0-9]", "", f.lower()): f for f in (fieldnames or [])}
+__all__ = ["load_corrections", "main", "normalise_header", "species_of"]
 
 
 def load_corrections(path: Path) -> dict[str, tuple[str, str]]:
-    """Read a TSV/CSV of curated labels into {accession: (organism, taxid)}.
-
-    Needs columns Accession and Organism; TaxID is optional. Other columns are ignored,
-    so the same file can carry the evidence for each correction.
-    """
-    delimiter = "," if path.suffix.lower() == ".csv" else "\t"
-    with open(path, newline="") as fh:
-        reader = csv.DictReader(fh, delimiter=delimiter)
-        cols = normalise_header(reader.fieldnames)
-        acc_col = cols.get("accession") or cols.get("assemblyaccession") or cols.get("acc")
-        org_col = (cols.get("organism") or cols.get("organismname") or cols.get("species")
-                   or cols.get("name"))
-        if not acc_col or not org_col:
-            sys.exit(f"{path}: expected columns 'Accession' and 'Organism'; "
-                     f"found {reader.fieldnames}")
-        tax_col = cols.get("taxid") or cols.get("taxonomyid")
-        out = {}
-        for row in reader:
-            acc = (row.get(acc_col) or "").strip()
-            organism = (row.get(org_col) or "").strip()
-            if acc and organism:
-                out[acc] = (organism, (row.get(tax_col) or "").strip() if tax_col else "")
-    return out
+    """``{accession: (organism, taxid)}`` from a curated table, exiting cleanly on a bad one."""
+    try:
+        return _read_corrections(path)
+    except MashIDError as exc:
+        sys.exit(str(exc))
 
 
 def main() -> int:
@@ -85,7 +53,7 @@ def main() -> int:
     ap.add_argument("data_dir", type=Path, help="ncbi_dataset/data directory holding <accession>/ folders")
     ap.add_argument("out_dir", type=Path)
     ap.add_argument("--copy", action="store_true", help="Copy files instead of symlinking")
-    ap.add_argument("--rank", choices=["species", "subspecies", "serovar"], default="species",
+    ap.add_argument("--rank", choices=list(BIN_RANKS), default="species",
                     help="Bin by species (default), by subspecies, or by subspecies and serovar")
     ap.add_argument("--max-bin", type=int, default=0, metavar="N",
                     help="Keep at most N assemblies per bin, preferring higher assembly levels (0 = no cap)")

@@ -20,6 +20,7 @@ from mashid.metadata import (
     sidecar_path,
     write_metadata,
 )
+from mashid.names import binomial
 from mashid.samples import FASTA_EXTENSIONS
 
 log = logging.getLogger("mashid.makedb")
@@ -197,11 +198,11 @@ def check_database(database: Path, min_length: int = DEFAULT_MIN_LENGTH) -> list
     # Only meaningful for Latin binomials; virus names ("Human papillomavirus 18") are not.
     by_epithet: dict[str, set[str]] = {}
     for e in [] if short_genome_db else entries:
-        toks = e.organism.split()
-        if len(toks) >= 2 and toks[1] not in ("sp.", "sp", "spp."):
-            genus = toks[1] if toks[0] == "Candidatus" and len(toks) > 2 else toks[0]
-            epithet = toks[2] if toks[0] == "Candidatus" and len(toks) > 2 else toks[1]
-            by_epithet.setdefault(epithet, set()).add(genus)
+        # names.binomial(), the same reading --confusable uses, so that --check and --confusable
+        # cannot give contradictory accounts of the same database.
+        parsed = binomial(e.organism)
+        if parsed is not None:
+            by_epithet.setdefault(parsed[1].casefold(), set()).add(parsed[0])
     synonyms = {ep: g for ep, g in by_epithet.items() if len(g) > 1}
     if synonyms:
         problems += len(synonyms)
@@ -230,24 +231,43 @@ def annotate_database(database: Path, metadata: Path | None, assembly_report: Pa
 def confusable_database(database: Path, metadata: Path | None, threads: int,
                         max_distance: float) -> Path:
     """Write the <db>.confusable.tsv sidecar: organisms this database cannot tell apart."""
-    if max_distance <= 0:
-        raise MashIDError(f"--confusable-distance must be greater than 0 (got {max_distance})")
+    if not 0 < max_distance <= 1:
+        raise MashIDError(f"--confusable-distance must be a Mash distance in (0, 1] "
+                          f"(got {max_distance})")
     exe = find_mash()
     if not database.is_file():
         raise MashIDError(f"Mash database not found: {database}")
-    entries = read_metadata(metadata) if metadata is not None else None
-    if entries is None:
-        path = sidecar_path(database)
-        if not path.is_file():
+    sidecar = sidecar_path(database)
+    if metadata is not None:
+        entries = read_metadata(metadata)
+        if Path(metadata).resolve() != sidecar.resolve():
+            # The table records organism names, and mashID will read them back from the sidecar.
+            # Names from somewhere else can disagree with it without anything noticing.
+            log.warning("Names for %s are being taken from %s, but mashID identifies references "
+                        "from %s; run --annotate --metadata %s as well so the two agree",
+                        database.name, metadata, sidecar.name, metadata)
+    else:
+        if not sidecar.is_file():
             raise MashIDError(f"No metadata sidecar for {database}; write one first with "
                               f"make_mashID_db --annotate, or pass --metadata")
-        entries = read_metadata(path)
+        entries = read_metadata(sidecar)
     neighbours = confusable.compute(database, entries, threads, max_distance, exe)
     path = confusable.confusable_path(database)
     try:
         return confusable.write(path, neighbours, entries)
     except OSError as exc:
         raise MashIDError(f"Could not write {path}: {exc}") from exc
+
+
+def _mash_distance(value: str) -> float:
+    """A Mash distance: (0, 1]. Rejected here rather than by mash, after minutes of work."""
+    try:
+        number = float(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value!r} is not a number") from None
+    if not 0 < number <= 1:
+        raise argparse.ArgumentTypeError(f"must be a Mash distance in (0, 1], got {value}")
+    return number
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -281,9 +301,10 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Write the <db>.confusable.tsv sidecar for an existing database: every "
                              "reference that another organism's references sit within "
                              "--confusable-distance of, so mashID can note calls the database cannot "
-                             "separate. All-pairs, so it costs O(n^2) in references; no sketching.")
+                             "separate. All-pairs, so it costs O(n^2) in references; no sketching. "
+                             "Can be combined with --annotate, which then runs first.")
     parser.add_argument("--confusable-distance", metavar=str(confusable.DEFAULT_MAX_DISTANCE),
-                        type=float, default=confusable.DEFAULT_MAX_DISTANCE,
+                        type=_mash_distance, default=confusable.DEFAULT_MAX_DISTANCE,
                         help="Mash distance below which two references of different organisms count as "
                              "inseparable. Default: %(default)s")
     parser.add_argument("-t", "--threads", metavar="4", type=int, default=4,
@@ -315,10 +336,15 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.check is not None:
             check_database(args.check, max(0, args.min_length))
-        elif args.confusable is not None:
-            confusable_database(args.confusable, args.metadata, threads, args.confusable_distance)
-        elif args.annotate is not None:
-            annotate_database(args.annotate, args.metadata, args.assembly_report)
+        elif args.annotate is not None or args.confusable is not None:
+            # Both, in the order that works: --confusable reads the sidecar --annotate writes.
+            if args.annotate is not None:
+                annotate_database(args.annotate, args.metadata, args.assembly_report)
+            if args.confusable is not None:
+                # After --annotate the sidecar already carries --metadata's names; reading it back
+                # is both correct and what mashID itself will do.
+                names_from = None if args.annotate is not None else args.metadata
+                confusable_database(args.confusable, names_from, threads, args.confusable_distance)
         else:
             make_database(args.input, args.output, args.prefix, threads, args.sketch_size, args.kmer_size,
                           metadata=args.metadata, assembly_report=args.assembly_report,
