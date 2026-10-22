@@ -66,6 +66,10 @@ def build_parser() -> argparse.ArgumentParser:
     io.add_argument("--db-metadata", metavar="FILE.tsv", type=Path, default=None,
                     help="Table mapping reference accessions to organism names (and TaxIDs). Default: the "
                          "<database>.metadata.tsv sidecar written by make_mashID_db, if present.")
+    io.add_argument("--db-confusable", metavar="FILE.tsv", type=Path, default=None,
+                    help="Table of references the database cannot separate from another organism, used to "
+                         "note such calls. Default: the <database>.confusable.tsv sidecar written by "
+                         "make_mashID_db --confusable, if present; without it the note is not reported.")
 
     flt = parser.add_argument_group("screening")
     flt.add_argument("--identity", metavar="0.9", type=_fraction, default=0.9,
@@ -135,6 +139,7 @@ def main(argv: list[str] | None = None) -> int:
         output=args.output,
         database=args.database,
         db_metadata=args.db_metadata,
+        db_confusable=args.db_confusable,
         min_identity=args.identity,
         max_p_value=args.p_value,
         n_hits=args.n_hits,

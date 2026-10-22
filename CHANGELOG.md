@@ -25,6 +25,15 @@
   TaxIDs, s=2000, [Figshare](https://doi.org/10.6084/m9.figshare.34018548), with metadata sidecar.
 - `scripts/build_virus_db.sh` and `scripts/refseq_gbff_metadata.py`: a database of all RefSeq viral
   genomes from the RefSeq release files, with names and TaxIDs from the GenBank flat files.
+- `make_mashID_db --confusable DB.msh` writes a `<database>.confusable.tsv` sidecar recording, for
+  every reference, the closest reference of each *other* organism within `--confusable-distance`
+  (default 0.005). mashID reads it automatically (`--db-confusable` to override) and notes calls the
+  database cannot separate: `Not separable in this database from: X, Y`. This is what
+  `--ambiguity-margin` cannot do under winner-take-all, where the runner-up reports the hashes unique
+  to it rather than its similarity, so two near-identical references look like a landslide rather
+  than the near-tie they are. Being a statement about the database and not the sample, the note does
+  not count towards `--fail-on note`. The table also sorts mislabelled references to the top: both
+  bad `mycobacteriaceae` references appear in its first 20 of 2102 rows.
 - `curation/label_corrections.tsv`: curated organism names for references that are mislabelled at
   NCBI, with the deposited name and the evidence for each correction recorded alongside.
 - `scripts/bin_by_species.py --corrections`: override the organism NCBI reports before binning, so a
