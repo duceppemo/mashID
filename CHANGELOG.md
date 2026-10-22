@@ -41,6 +41,12 @@
   near-duplicate of the species it actually belongs to.
 - `scripts/apply_label_corrections.py`: apply curated corrections to a database that is already
   built, rewriting the `.metadata.tsv` sidecar and `bins.tsv` in place without re-sketching.
+- `scripts/reannotate_summary.py`: rebuild a finished run's `summary_mashID.tsv`, `_mqc.tsv` and
+  `.json` from the per-sample tables and the database's current sidecars, without screening the
+  reads again. `Identification`, `TaxID` and `Note` are looked up when the summary is written
+  rather than measured, so a relabelled reference or a newly published `--confusable` table can be
+  applied to results that predate it. It reuses mashID's own `annotate()` and writers, so the
+  output is what a fresh run would produce; the rewritten JSON records which sidecars were used.
 
 ## 0.2.8 (2026-09-23)
 

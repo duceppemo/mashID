@@ -64,6 +64,12 @@ The `Not separable` note states a fact about the database rather than about the 
 not count towards `--fail-on note`. It is only reported when the sidecar exists; write it with
 `make_mashID_db --confusable` (see Databases).
 
+`Identification`, `TaxID` and `Note` are looked up from the sidecars when the summary is written,
+not measured, so results that predate a sidecar can be brought up to date without screening the
+reads again: `scripts/reannotate_summary.py RESULTS_DIR` rebuilds the three summary files from the
+per-sample tables, backs up what it replaces, and records in the JSON which sidecars it used. The
+per-sample tables and every measured column are left untouched.
+
 ## Ignored references
 
 Hits to references shorter than `--min-ref-length` are dropped before ranking, and the log says how
