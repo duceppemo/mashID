@@ -1,6 +1,6 @@
 """mashID: identify organisms from genome assemblies or raw reads using Mash."""
 
-__version__ = "0.2.8"
+__version__ = "0.2.9"
 __author__ = "Marc-Olivier Duceppe"
 
 

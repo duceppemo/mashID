@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.9 (2026-10-22)
+
 ### Fixed
 - Two references in the `mycobacteriaceae` database carried the organism name they were deposited
   under at NCBI, which is wrong in both cases, so samples of those species were misidentified:

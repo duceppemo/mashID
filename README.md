@@ -13,9 +13,8 @@
   <a href="https://github.com/duceppemo/mashID/actions/workflows/ci.yml"><img src="https://github.com/duceppemo/mashID/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://codecov.io/gh/duceppemo/mashID"><img src="https://codecov.io/gh/duceppemo/mashID/graph/badge.svg" alt="Coverage"></a>
   <a href="https://github.com/duceppemo/mashID/releases/latest"><img src="https://img.shields.io/github/v/release/duceppemo/mashID?label=release&cacheSeconds=3600" alt="Latest release"></a>
-  <!-- Enable once the bioconda recipe is merged (https://github.com/bioconda/bioconda-recipes/pull/69474):
   <a href="https://anaconda.org/bioconda/mashid"><img src="https://img.shields.io/conda/vn/bioconda/mashid?label=bioconda&cacheSeconds=3600" alt="Bioconda"></a>
-  -->
+  <a href="https://anaconda.org/bioconda/mashid"><img src="https://img.shields.io/conda/dn/bioconda/mashid?label=downloads&cacheSeconds=3600" alt="Bioconda downloads"></a>
   <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10+">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/duceppemo/mashID" alt="License: MIT"></a>
   <a href="https://doi.org/10.5281/zenodo.22888109"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.22888109.svg" alt="DOI"></a>
@@ -31,13 +30,15 @@ screened together.
 ## Quick start
 
 ```bash
-conda create -n mashID -c conda-forge -c bioconda python=3.12 pip mash=2.3 python-isal
+conda create -n mashID -c conda-forge -c bioconda mashid
 conda activate mashID
-pip install https://github.com/duceppemo/mashID/archive/refs/tags/v0.2.8.tar.gz
 
 mashID_download_db mycobacteriaceae          # 284 MB, MD5-verified
 mashID -i /path/to/fastq_or_fasta -o results
 ```
+
+Mash comes with the package. See [Installation](https://github.com/duceppemo/mashID/wiki/Installation)
+to install from a release tarball or a clone instead.
 
 ```
 Sample            Sequences  Bases    Identity  Shared_Hashes  Median_Multiplicity  Est_Depth  P_Value  Accession        TaxID  Identification                  Note
@@ -77,7 +78,7 @@ maintained in [`docs/wiki`](docs/wiki):
 
 If mashID is useful in your work, please cite it (see [`CITATION.cff`](CITATION.cff)):
 
-> Duceppe, M.-O. (2026). mashID: species identification from genome assemblies and raw reads using Mash (v0.2.8). Zenodo. https://doi.org/10.5281/zenodo.22888109
+> Duceppe, M.-O. (2026). mashID: species identification from genome assemblies and raw reads using Mash (v0.2.9). Zenodo. https://doi.org/10.5281/zenodo.22888109
 
 and Mash: Ondov et al. (2016) *Mash: fast genome and metagenome distance estimation using MinHash*, Genome Biology 17:132. https://doi.org/10.1186/s13059-016-0997-x
 

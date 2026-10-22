@@ -2,18 +2,29 @@
 
 Requirements: Python ≥ 3.10 and Mash 2.3. mashID has no Python dependencies.
 
-## conda + pip (recommended)
+## bioconda (recommended)
+
+```bash
+conda create -n mashID -c conda-forge -c bioconda mashid
+conda activate mashID
+mashID -h
+```
+
+Mash is pulled in as a dependency, so this is the only step. Add `python-isal` to the environment to
+make gzip decompression two to three times faster when counting reads; it is optional.
+
+Three commands are installed: `mashID`, `make_mashID_db` and `mashID_download_db`.
+
+## conda + pip
+
+To install a version that is not on bioconda yet:
 
 ```bash
 conda create -n mashID -c conda-forge -c bioconda python=3.12 pip mash=2.3 python-isal
 conda activate mashID
-pip install https://github.com/duceppemo/mashID/archive/refs/tags/v0.2.8.tar.gz
+pip install https://github.com/duceppemo/mashID/archive/refs/tags/v0.2.9.tar.gz
 mashID -h
 ```
-
-`python-isal` is optional; it makes gzip decompression two to three times faster when counting reads.
-
-Three commands are installed: `mashID`, `make_mashID_db` and `mashID_download_db`.
 
 ## From a clone
 
@@ -27,10 +38,13 @@ pip install .
 
 Running from the source tree without installing also works: `python mashID.py -h`.
 
-## Bioconda
+## Adding mashID to an existing environment
 
-A recipe is [submitted to bioconda](https://github.com/bioconda/bioconda-recipes/pull/69474). Once
-merged, `conda install -c conda-forge -c bioconda mashid` installs everything, Mash included.
+```bash
+conda install -c conda-forge -c bioconda mashid
+```
+
+The package is named `mashid` in lowercase; both `mashID` and `mashid` work as commands.
 
 ## Verify the installation
 
