@@ -156,7 +156,7 @@ def test_a_correction_matching_a_ragged_row_is_not_called_unused(tmp_path, capsy
     p = tmp_path / "db.metadata.tsv"
     p.write_text(SIDECAR_HEADER + "GCA_1.1\tGenusa one\n")
     applier.main([str(_corrections(tmp_path)), str(p), "--no-backup"])
-    assert "unused correction" not in capsys.readouterr().err
+    assert "matched no row" not in capsys.readouterr().err
 
 
 def _serovar_bins(tmp_path, name):
@@ -228,7 +228,8 @@ def test_a_correction_that_matches_nothing_is_reported(tmp_path, capsys):
     p = tmp_path / "db.metadata.tsv"
     p.write_text(SIDECAR_HEADER + "GCA_7.7\tGenusc nine\t999\t4000000\t1000\t/x/c.fna\td\n")
     assert applier.main([str(_corrections(tmp_path)), str(p), "--dry-run"]) == 0
-    assert "unused correction: GCA_1.1" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "1 of 1 correction(s) matched no row" in err and "GCA_1.1" in err
 
 
 def test_missing_columns_in_target_is_an_error(tmp_path):

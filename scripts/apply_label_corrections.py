@@ -148,10 +148,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  {n} row(s) {'would change' if args.dry_run else 'changed'}")
         total += n
         matched |= hit
-    # A correction that matched nothing is the failure mode worth shouting about: it means the
-    # accession is spelled differently, or this is not the table it was meant for.
-    for acc in sorted(set(corrections) - matched):
-        print(f"unused correction: {acc} matched no row of any target", file=sys.stderr)
+    # A correction that matched nothing is worth saying: the accession may be spelled differently,
+    # or this may not be the table it was meant for. But one curation file covers every database,
+    # so most of its rows legitimately miss any single target; summarise rather than list each.
+    unused = sorted(set(corrections) - matched)
+    if unused:
+        shown = ", ".join(unused[:4]) + (", ..." if len(unused) > 4 else "")
+        print(f"{len(unused)} of {len(corrections)} correction(s) matched no row of any target; "
+              f"normal when one curation file covers several databases: {shown}", file=sys.stderr)
     if args.dry_run:
         print(f"\ndry run: {total} row(s) would change, nothing written")
     return 0

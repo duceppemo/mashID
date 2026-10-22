@@ -121,8 +121,13 @@ def main() -> int:
         print(f"{dropped} assemblies dropped by --max-bin {args.max_bin}", file=sys.stderr)
     if corrections:
         print(f"{len(applied)} of {len(corrections)} label correction(s) applied", file=sys.stderr)
-        for acc in sorted(set(corrections) - applied):
-            print(f"  unused correction: {acc} not in {args.report.name}", file=sys.stderr)
+        unused = sorted(set(corrections) - applied)
+        if unused:
+            # One curation file covers every database, so most of its rows belong to other taxa.
+            # Say so once rather than once per row, or a build logs a screenful of harmless lines.
+            shown = ", ".join(unused[:4]) + (", ..." if len(unused) > 4 else "")
+            print(f"  {len(unused)} correction(s) match no accession in {args.report.name}; normal "
+                  f"when one curation file covers several databases: {shown}", file=sys.stderr)
 
     total = sum(counts.values())
     print(f"{total} assemblies in {len(counts)} bins; {missing} accession(s) without a sequence file",
