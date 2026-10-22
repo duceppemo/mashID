@@ -160,6 +160,15 @@ independently confirmed as *salamae* II 58:d:z6. Two *salamae* genomes, one name
 lesson is the method rather than the record: after correcting the rare labels, re-read the
 confusable table, because collapsing the easy pairs is what makes the remaining one visible.
 
+With that row applied the salmonella database converges: **its confusable table holds no cross-name
+pair below the 0.001 dereplication threshold at all**, the tightest being serovar-level distinctions
+inside subsp. *enterica* (Typhimurium against Typhimurium var. 5-, Yovokome against Manhattan) at
+0.00103, above the threshold and mere naming granularity. That emptiness is the stopping condition
+worth aiming for, because a collapsed pair is exactly what conceals the next error: while eighteen
+such pairs cluttered the table the *salamae* record was indistinguishable from them. Reaching it
+took four passes over this database — the cost of *discovering* the 29 corrections, not of applying
+them; a rebuild from scratch now needs one pass.
+
 **Mislabels come in submission batches, so check the batch, not the record.** The same thing happened
 in `escherichia` on the same rebuild, which is why that row says 2: correcting `GCF_002290495.1` from
 *S. flexneri* to *S. sonnei* collapsed its 0.000074 cross-name pair, and the rebuilt database
