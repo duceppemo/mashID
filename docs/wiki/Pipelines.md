@@ -92,8 +92,8 @@ rule mashid:
 
 ## Containers
 
-Once the [bioconda recipe](https://github.com/bioconda/bioconda-recipes/pull/69474) is merged, a
-Biocontainer image is built automatically and can be used with Docker or Apptainer:
+mashID is on bioconda, so a [Biocontainer](https://quay.io/repository/biocontainers/mashid?tab=tags)
+image is built automatically for each release and can be used with Docker or Apptainer:
 
 ```bash
 docker run --rm -v $PWD:/data quay.io/biocontainers/mashid:<tag> mashID -i /data/reads -o /data/out -d /data/db.msh
