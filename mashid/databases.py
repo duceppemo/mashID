@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import glob
 import hashlib
 import http.client
 import logging
 import os
+import secrets
 import shutil
-import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -245,6 +246,7 @@ def _human(n: float) -> str:
 
 
 _PART_PREFIX = ".part-"
+_PART_ATTEMPTS = 8
 # Only sweep temporary files old enough that no live download could own one. A shorter window would
 # delete the partial file of a download running in another process, which is what unique names fixed.
 _STALE_PART_AGE = 24 * 3600
@@ -257,13 +259,34 @@ def _sweep_stale_parts(dest: Path) -> None:
     the partial file behind, and for a 284 MB sketch that is worth reclaiming.
     """
     cutoff = time.time() - _STALE_PART_AGE
-    for leftover in dest.parent.glob(dest.name + _PART_PREFIX + "*"):
+    # glob.escape: a destination named my[old].msh would otherwise read as a character class and
+    # sweep another destination's files instead of its own.
+    pattern = glob.escape(dest.name) + _PART_PREFIX + "*"
+    for leftover in dest.parent.glob(pattern):
         try:
             if leftover.is_file() and leftover.stat().st_mtime < cutoff:
                 leftover.unlink()
                 log.info("Removed an abandoned partial download: %s", leftover.name)
         except OSError as exc:  # someone else's file, or a racing cleanup: not our problem
             log.debug("Could not remove %s (%s)", leftover, exc)
+
+
+def _open_new_part(dest: Path) -> tuple[int, Path]:
+    """Create a uniquely named temporary file beside ``dest``; returns its fd and path.
+
+    ``O_CREAT | O_EXCL`` with mode 0o666 lets the kernel apply the user's umask as the file is
+    created. That is unique like ``tempfile.mkstemp`` but without mkstemp's fixed 0600, so no chmod
+    is needed afterwards -- and a chmod was both a regression on filesystems that refuse one
+    (vfat, some bind mounts), where it threw away a complete verified download, and a way to ignore
+    the umask a shared installation may rely on.
+    """
+    for _ in range(_PART_ATTEMPTS):
+        path = dest.with_name(dest.name + _PART_PREFIX + secrets.token_hex(6))
+        try:
+            return os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o666), path
+        except FileExistsError:
+            continue
+    raise MashIDError(f"Could not create a temporary file for {dest.name} in {dest.parent}")
 
 
 def _fetch(url: str, dest: Path, size: int, md5: str | None, verify: bool) -> None:
@@ -278,8 +301,7 @@ def _fetch(url: str, dest: Path, size: int, md5: str | None, verify: bool) -> No
     log.info("Downloading %s (%s) from %s", dest.name, _human(size), url)
     dest.parent.mkdir(parents=True, exist_ok=True)
     _sweep_stale_parts(dest)
-    fd, tmp_name = tempfile.mkstemp(dir=dest.parent, prefix=dest.name + _PART_PREFIX)
-    tmp = Path(tmp_name)
+    fd, tmp = _open_new_part(dest)
     digest = hashlib.md5()
     received = 0
     request = urllib.request.Request(url, headers={"User-Agent": f"mashID/{__version__}"})
@@ -303,10 +325,6 @@ def _fetch(url: str, dest: Path, size: int, md5: str | None, verify: bool) -> No
                 f"Checksum mismatch for {dest.name}: expected {md5}, got {digest.hexdigest()}. "
                 "The download may be corrupted or the remote file may have changed."
             )
-        # mkstemp creates the file 0600 and os.replace carries that mode over, which would install
-        # a database only its downloader can read -- useless for the shared MASHID_DB_DIR the
-        # cluster case above depends on. A database is read-only reference data, so 0644.
-        os.chmod(tmp, 0o644)
         # Atomic, so an interrupted download never leaves a half-written database in place.
         os.replace(tmp, dest)
     # http.client.IncompleteRead -- a response cut short mid-stream -- is neither a URLError nor an
@@ -393,6 +411,12 @@ def download(name: str, directory: Path | None = None, force: bool = False, veri
     for path, needed in ((dest, need_db), (sidecar, need_meta), (confusable, need_confusable)):
         if path.is_file() and needed and not force:
             log.warning("%s exists but its checksum does not match; re-downloading", path.name)
+    # Before the early return, not only inside _fetch: a download killed outright leaves its
+    # partial file behind, and the next run of this command usually finds everything installed and
+    # never reaches _fetch, so the 284 MB would sit there for good.
+    if directory.is_dir():
+        for path in (dest, sidecar, confusable):
+            _sweep_stale_parts(path)
     if not need_db and not need_meta and not need_confusable:
         log.info("%s is already installed: %s", name, dest)
         return dest
