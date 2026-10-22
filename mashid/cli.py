@@ -96,8 +96,9 @@ def build_parser() -> argparse.ArgumentParser:
     flt.add_argument("--skip-stats", action="store_true",
                      help="Do not count reads/bases of the input files (faster on very large fastq).")
     flt.add_argument("--fail-on", choices=["none", "no-hit", "note"], default="none",
-                     help="Exit with code 2 when any sample has no hit ('no-hit') or has any note or no hit "
-                          "('note'). For pipelines. Default: %(default)s")
+                     help="Exit with code 2 when any sample has no hit ('no-hit'), or has no hit or a note "
+                          "about itself ('note': mixture, ambiguous or low coverage, but not the "
+                          "database-wide 'Not separable' note). For pipelines. Default: %(default)s")
 
     perf = parser.add_argument_group("performance")
     perf.add_argument("-t", "--threads", metavar=str(max_cpu), type=_positive_int, default=max_cpu,

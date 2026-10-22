@@ -17,22 +17,26 @@ package first (``pip install -e .``).
 
 The rewritten files record how they were made under ``reannotated`` in summary_mashID.json. Each is
 backed up to <name>.bak-<date> unless --no-backup is given; --dry-run writes nothing.
+
+The summary being replaced is treated as the authority on which samples must survive: a rebuild that
+would drop a row it holds -- an interrupted run, a hand-edited mashID_run.json -- is refused rather
+than reported as a success.
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
+import dataclasses
 import datetime as dt
-import hashlib
 import json
-import shutil
 import sys
 from pathlib import Path
 
 try:
     from mashid import MashIDError
     from mashid import confusable as confusable_mod
+    from mashid.fileutil import backup, md5sum
     from mashid.mash import ScreenHit
     from mashid.metadata import read_metadata, sidecar_path
     from mashid.pipeline import (
@@ -42,6 +46,7 @@ try:
         SUMMARY_COLUMNS,
         SUMMARY_FILENAME,
         SampleResult,
+        Settings,
         annotate,
         summary_row,
         write_json,
@@ -56,13 +61,20 @@ except ImportError as exc:  # an installed mashid older than this script, or non
 PER_SAMPLE_SUFFIX = "_mashID.tsv"
 REWRITTEN = (SUMMARY_FILENAME, MULTIQC_FILENAME, JSON_FILENAME)
 
+# Columns this script recomputes. Everything else in the summary is a measurement and is carried
+# over from the file being replaced.
+LOOKED_UP_COLUMNS = ("Identification", "TaxID", "Note")
+DRY_RUN_SAMPLES = 20
 
-def md5(path: Path) -> str:
-    digest = hashlib.md5()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+
+def _default(option: str):
+    """A mashID option's default, read off ``Settings`` rather than copied.
+
+    A run.json written before an option existed has no entry for it, and re-annotating it under a
+    stale copy of the default would disagree with what mashID itself would do today.
+    """
+    field = next(f for f in dataclasses.fields(Settings) if f.name == option)
+    return field.default
 
 
 def read_hits(path: Path) -> list[ScreenHit]:
@@ -96,18 +108,31 @@ def _int_or_none(value: str | None) -> int | None:
 
 
 def rebuild(results_dir: Path, database: Path | None = None) -> tuple[list[SampleResult], list[dict],
-                                                                      list[str], Path, int]:
-    """Re-annotate every sample of a results directory. Returns (results, rows, columns, db, changed)."""
+                                                                      list[str], Path, list[str]]:
+    """Re-annotate every sample of a results directory.
+
+    Returns (results, rows, columns, database, changed), where ``changed`` names the samples whose
+    Identification, TaxID or Note the current sidecars would alter.
+    """
     run_info_path = results_dir / RUN_INFO_FILENAME
     summary_path = results_dir / SUMMARY_FILENAME
     for required in (run_info_path, summary_path):
         if not required.is_file():
             raise MashIDError(f"Not a mashID results directory ({required.name} not found): {results_dir}")
-    run_info = json.loads(run_info_path.read_text())
-    params = run_info.get("parameters", {})
-    database = database or Path(run_info.get("database", {}).get("path", ""))
+    try:
+        run_info = json.loads(run_info_path.read_text())
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise MashIDError(f"{run_info_path} is not readable JSON: {exc}") from exc
+    if not isinstance(run_info, dict):
+        raise MashIDError(f"{run_info_path} does not hold a run record")
+    params = run_info.get("parameters") or {}
+    if database is None:
+        recorded = (run_info.get("database") or {}).get("path") or ""
+        if not recorded:
+            raise MashIDError(f"{run_info_path.name} records no database path; pass --database")
+        database = Path(recorded)
     if not database.is_file():
-        raise MashIDError(f"Database not found: {database or '(none recorded in the run)'}; pass --database")
+        raise MashIDError(f"Database not found: {database}; pass --database")
 
     metadata = read_metadata(sidecar_path(database))
     confusable = confusable_mod.load(database, None)
@@ -116,19 +141,39 @@ def rebuild(results_dir: Path, database: Path | None = None) -> tuple[list[Sampl
               f"'not separable' notes; write one with make_mashID_db --confusable", file=sys.stderr)
 
     # Sequences/Bases and any sample-sheet columns live only in the summary; carry them over.
-    with summary_path.open(newline="") as fh:
+    with summary_path.open(newline="", encoding="utf-8-sig") as fh:
         reader = csv.DictReader(fh, delimiter="\t")
         columns = list(reader.fieldnames or SUMMARY_COLUMNS)
+        if "Sample" not in columns:
+            raise MashIDError(f"{summary_path} has no Sample column; found {columns}")
         existing = {row["Sample"]: row for row in reader}
     extra_columns = [c for c in columns if c not in SUMMARY_COLUMNS]
 
-    results, changed = [], 0
-    for entry in run_info.get("samples", []):
-        name = entry["name"]
+    # The sample list comes from the run record, but the summary being replaced is the authority on
+    # which rows must survive: a run.json with an empty or renamed "samples" key would otherwise
+    # truncate the summary to its header and report success.
+    entries = run_info.get("samples") or []
+    named = {e.get("name") for e in entries if isinstance(e, dict)}
+    lost = sorted(set(existing) - {n for n in named if n})
+    if lost:
+        raise MashIDError(
+            f"{run_info_path.name} lists {len(named)} sample(s) but {summary_path.name} has "
+            f"{len(existing)} row(s); rewriting it would drop {len(lost)} of them "
+            f"({', '.join(lost[:5])}{', ...' if len(lost) > 5 else ''}). Refusing to write.")
+
+    results, changed = [], []
+    for entry in entries:
+        name = entry.get("name") if isinstance(entry, dict) else None
+        if not name:
+            raise MashIDError(f"{run_info_path.name}: a sample entry has no 'name'")
         per_sample = results_dir / f"{name}{PER_SAMPLE_SUFFIX}"
         if not per_sample.is_file():
             raise MashIDError(f"Per-sample table missing for {name}: {per_sample}")
-        old = existing.get(name, {})
+        old = existing.get(name)
+        if old is None:
+            print(f"warning: {name} is in {run_info_path.name} but not in {summary_path.name}; its "
+                  f"Sequences, Bases and any sample-sheet columns will be NA", file=sys.stderr)
+            old = {}
         sample = Sample(name=name,
                         files=[Path(f) for f in entry.get("files", [])],
                         seq_type=entry.get("type", "fastq"),
@@ -136,23 +181,18 @@ def rebuild(results_dir: Path, database: Path | None = None) -> tuple[list[Sampl
                         bases=_int_or_none(old.get("Bases")),
                         extra={c: old.get(c, "") for c in extra_columns})
         result = SampleResult(sample=sample, hits=read_hits(per_sample))
-        result.notes = annotate(result, metadata, params.get("ambiguity_margin", 0.005),
-                                params.get("winner_take_all", True), confusable)
+        result.notes = annotate(result, metadata,
+                                params.get("ambiguity_margin", _default("ambiguity_margin")),
+                                params.get("winner_take_all", _default("winner_take_all")),
+                                confusable)
         results.append(result)
-        if "; ".join(result.notes) != (old.get("Note") or ""):
-            changed += 1
-    return results, [summary_row(r, metadata) for r in results], columns, database, changed
 
-
-def backup(path: Path) -> Path:
-    stamp = dt.date.today().strftime("%Y%m%d")
-    dest = path.with_name(f"{path.name}.bak-{stamp}")
-    n = 2
-    while dest.exists():                        # never clobber an older backup
-        dest = path.with_name(f"{path.name}.bak-{stamp}.{n}")
-        n += 1
-    shutil.copy2(path, dest)
-    return dest
+    rows = [summary_row(r, metadata) for r in results]
+    for row in rows:
+        old = existing.get(row["Sample"], {})
+        if any(row[c] != (old.get(c) or "") for c in LOOKED_UP_COLUMNS if c in old):
+            changed.append(row["Sample"])
+    return results, rows, columns, database, changed
 
 
 def provenance(database: Path) -> dict:
@@ -164,7 +204,7 @@ def provenance(database: Path) -> dict:
     }
     for key, path in (("metadata_sidecar", sidecar_path(database)),
                       ("confusable_sidecar", confusable_mod.confusable_path(database))):
-        record[key] = {"path": str(path), "md5": md5(path)} if path.is_file() else None
+        record[key] = {"path": str(path), "md5": md5sum(path)} if path.is_file() else None
     return record
 
 
@@ -185,11 +225,15 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
-    print(f"{len(rows)} sample(s); {changed} with a changed Note; "
-          f"{sum(1 for r in rows if r['Note'])} with any note")
+    print(f"{len(rows)} sample(s); {len(changed)} with a changed "
+          f"{', '.join(LOOKED_UP_COLUMNS)}; {sum(1 for r in rows if r['Note'])} with any note")
     if args.dry_run:
-        for row in rows[:3]:
-            print(f"  {row['Sample']}: {row['Note'] or '(none)'}")
+        shown = [r for r in rows if r["Sample"] in changed][:DRY_RUN_SAMPLES]
+        for row in shown:
+            print(f"  {row['Sample']}: {row['Identification']} ({row['TaxID']}) "
+                  f"{row['Note'] or '(no note)'}")
+        if len(changed) > len(shown):
+            print(f"  ... and {len(changed) - len(shown)} more")
         print("dry run: nothing written")
         return 0
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import http.client
 import logging
 import os
 import shutil
@@ -12,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from mashid import MashIDError, __version__
+from mashid.fileutil import md5sum
 
 log = logging.getLogger(__name__)
 
@@ -232,14 +234,6 @@ def resolve_database(spec: str | os.PathLike | None, directory: Path | None = No
     )
 
 
-def md5sum(path: Path) -> str:
-    h = hashlib.md5()
-    with open(path, "rb") as fh:
-        for chunk in iter(lambda: fh.read(_CHUNK), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
 def _human(n: float) -> str:
     for unit in ("B", "KB", "MB", "GB"):
         if n < 1024 or unit == "GB":
@@ -268,7 +262,9 @@ def _fetch(url: str, dest: Path, size: int, md5: str | None, verify: bool) -> No
                 if size and received / size >= next_report:
                     log.info("  %3.0f%% (%s)", 100 * received / size, _human(received))
                     next_report += 0.1
-    except (urllib.error.URLError, OSError) as exc:
+    # http.client.IncompleteRead -- a response cut short mid-stream -- is neither a URLError nor an
+    # OSError, and a 284 MB transfer is long enough for that to happen.
+    except (urllib.error.URLError, http.client.HTTPException, OSError) as exc:
         tmp.unlink(missing_ok=True)
         raise MashIDError(f"Download of {url} failed: {exc}") from exc
     if verify and md5 and digest.hexdigest() != md5:
@@ -284,24 +280,40 @@ def _up_to_date(path: Path, md5: str | None, verify: bool) -> bool:
     return path.is_file() and (not verify or md5 is None or md5sum(path) == md5)
 
 
+def _sidecar_up_to_date(path: Path, md5: str | None) -> bool:
+    """Like ``_up_to_date`` but always checksums, whatever ``--no-verify`` says.
+
+    --no-verify is there to skip hashing a 284 MB sketch; a sidecar is a megabyte, and skipping it
+    would leave a corrected label table beside the sketch it contradicts -- or, worse, install a new
+    confusable table beside the deposited names it was computed to replace.
+    """
+    return _up_to_date(path, md5, verify=True)
+
+
 def download(name: str, directory: Path | None = None, force: bool = False, verify: bool = True) -> Path:
     """Download a registry database (and its sidecars, when published) to ``directory``
     (default: db_dir()), verifying MD5 checksums. Existing, matching files are kept."""
     if name not in REGISTRY:
         raise MashIDError(f"Unknown database '{name}'. Available: {', '.join(REGISTRY)}")
+    from mashid.confusable import confusable_path  # local imports: keep module load light
+    from mashid.metadata import sidecar_path
+
     remote = REGISTRY[name]
     directory = directory or db_dir()
     dest = directory / remote.filename
-    sidecar = directory / (remote.filename[:-4] + ".metadata.tsv")
-    confusable = directory / (remote.filename[:-4] + ".confusable.tsv")
+    # One derivation of each sidecar path, shared with the readers (metadata.sidecar_path and
+    # confusable.confusable_path), so that the two cannot disagree about where a sidecar lives.
+    sidecar = sidecar_path(dest)
+    confusable = confusable_path(dest)
 
     need_db = force or not _up_to_date(dest, remote.md5, verify)
     need_meta = remote.metadata_url is not None and (
-        force or not _up_to_date(sidecar, remote.metadata_md5, verify))
+        force or not _sidecar_up_to_date(sidecar, remote.metadata_md5))
     need_confusable = remote.confusable_url is not None and (
-        force or not _up_to_date(confusable, remote.confusable_md5, verify))
-    if dest.is_file() and need_db and not force:
-        log.warning("%s exists but its checksum does not match; re-downloading", dest)
+        force or not _sidecar_up_to_date(confusable, remote.confusable_md5))
+    for path, needed in ((dest, need_db), (sidecar, need_meta), (confusable, need_confusable)):
+        if path.is_file() and needed and not force:
+            log.warning("%s exists but its checksum does not match; re-downloading", path.name)
     if not need_db and not need_meta and not need_confusable:
         log.info("%s is already installed: %s", name, dest)
         return dest

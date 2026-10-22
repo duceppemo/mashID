@@ -93,7 +93,7 @@ def _corrections(tmp_path):
 
 def test_sidecar_organism_taxid_and_description(tmp_path):
     p = _sidecar(tmp_path)
-    assert applier.apply_to(p, applier.read_corrections(_corrections(tmp_path)), True, False) == 1
+    assert applier.apply_to(p, applier.read_corrections(_corrections(tmp_path)), True, False) == (1, {"GCA_1.1"})
     rows = [ln.split("\t") for ln in p.read_text().splitlines()[1:]]
     assert rows[0][1] == "Genusb two" and rows[0][2] == "222"
     assert "deposited as 'Genusa one'" in rows[0][6]
@@ -105,23 +105,23 @@ def test_sidecar_organism_taxid_and_description(tmp_path):
 def test_bins_table_bin_is_recomputed(tmp_path):
     p = tmp_path / "bins.tsv"
     p.write_text("Accession\tOrganism\tTaxID\tBin\nGCA_1.1\tGenusa one\t111\tGenusa_one\n")
-    assert applier.apply_to(p, applier.read_corrections(_corrections(tmp_path)), False, False) == 1
+    assert applier.apply_to(p, applier.read_corrections(_corrections(tmp_path)), False, False) == (1, {"GCA_1.1"})
     assert p.read_text().splitlines()[1].split("\t")[3] == "Genusb_two"
 
 
 def test_idempotent(tmp_path):
     p = _sidecar(tmp_path)
     corrections = applier.read_corrections(_corrections(tmp_path))
-    assert applier.apply_to(p, corrections, False, False) == 1
+    assert applier.apply_to(p, corrections, False, False)[0] == 1
     first = p.read_text()
-    assert applier.apply_to(p, corrections, False, False) == 0
+    assert applier.apply_to(p, corrections, False, False)[0] == 0
     assert p.read_text() == first                                   # no second note appended
 
 
 def test_dry_run_changes_nothing(tmp_path):
     p = _sidecar(tmp_path)
     before = p.read_text()
-    assert applier.apply_to(p, applier.read_corrections(_corrections(tmp_path)), True, True) == 1
+    assert applier.apply_to(p, applier.read_corrections(_corrections(tmp_path)), True, True) == (1, {"GCA_1.1"})
     assert p.read_text() == before
     assert not list(tmp_path.glob("*.bak-*"))
 
@@ -135,6 +135,72 @@ def test_existing_backup_is_never_clobbered(tmp_path):
     applier.apply_to(p, corrections, True, False)
     assert older.read_text() == "precious\n"
     assert p.with_name(f"{p.name}.bak-{stamp}.2").is_file()
+
+
+def test_a_row_without_its_trailing_bin_field_does_not_crash(tmp_path):
+    """A hand-edited table, or one from a tool that omits trailing empties, used to raise
+    IndexError half-way through rewriting the file."""
+    p = tmp_path / "bins.tsv"
+    p.write_text("Accession\tOrganism\tTaxID\tBin\nGCA_1.1\tGenusa one\t111\n")
+    changed, _ = applier.apply_to(p, applier.read_corrections(_corrections(tmp_path)), False, False)
+    assert changed == 1
+    assert p.read_text().splitlines()[1].split("\t")[:3] == ["GCA_1.1", "Genusb two", "222"]
+
+
+def test_bin_is_recomputed_at_the_rank_the_bins_were_built_at(tmp_path):
+    """--rank species on a subspecies-binned table silently flattened the bin, and the Bin column
+    is what drives dereplication on the next rebuild."""
+    corrections = tmp_path / "corrections.tsv"
+    corrections.write_text("Accession\tOrganism\n"
+                           "GCA_1.1\tSalmonella enterica subsp. enterica serovar Typhimurium\n")
+    body = ("Accession\tOrganism\tTaxID\tBin\n"
+            "GCA_1.1\tSalmonella enterica subsp. enterica serovar Dublin\t28901"
+            "\tSalmonella_enterica_subsp_enterica_serovar_Dublin\n")
+    for rank, expected in (("species", "Salmonella_enterica"),
+                           ("serovar", "Salmonella_enterica_subsp_enterica_serovar_Typhimurium")):
+        p = tmp_path / f"bins_{rank}.tsv"
+        p.write_text(body)
+        applier.apply_to(p, applier.read_corrections(corrections), False, False, rank)
+        assert p.read_text().splitlines()[1].split("\t")[3] == expected
+
+
+def test_a_confusable_table_has_both_organism_columns_corrected(tmp_path):
+    """Confusable_Organism is the column the note is built from, so leaving it stale would keep
+    reporting the deposited name."""
+    p = tmp_path / "db.confusable.tsv"
+    p.write_text("Accession\tOrganism\tConfusable_Organism\tDistance\tNearest_Accession\n"
+                 "GCA_1.1\tGenusa one\tGenusc nine\t0.001\tGCA_9.9\n"
+                 "GCA_9.9\tGenusc nine\tGenusa one\t0.001\tGCA_1.1\n")
+    changed, matched = applier.apply_to(p, applier.read_corrections(_corrections(tmp_path)),
+                                        False, False)
+    assert changed == 2 and matched == {"GCA_1.1"}
+    rows = [ln.split("\t") for ln in p.read_text().splitlines()[1:]]
+    assert rows[0][1] == "Genusb two"       # its own Organism
+    assert rows[1][2] == "Genusb two"       # and where another row names it
+
+
+def test_a_crlf_table_is_rewritten_without_a_stray_carriage_return(tmp_path):
+    p = tmp_path / "db.metadata.tsv"
+    p.write_bytes(SIDECAR_HEADER.replace("\n", "\r\n").encode()
+                  + b"GCA_1.1\tGenusa one\t111\t4000000\t1000\t/x/a.fna\tcontig one\r\n")
+    applier.apply_to(p, applier.read_corrections(_corrections(tmp_path)), False, False)
+    text = p.read_text()
+    assert "\r" not in text
+    assert text.splitlines()[1].split("\t")[6].endswith("]")      # the note ends the field
+
+
+def test_a_missing_corrections_file_exits_cleanly(tmp_path):
+    with pytest.raises(SystemExit, match="Corrections file not found"):
+        applier.read_corrections(tmp_path / "nope.tsv")
+    with pytest.raises(SystemExit, match="Corrections file not found"):
+        binner.load_corrections(tmp_path / "nope.tsv")
+
+
+def test_a_correction_that_matches_nothing_is_reported(tmp_path, capsys):
+    p = tmp_path / "db.metadata.tsv"
+    p.write_text(SIDECAR_HEADER + "GCA_7.7\tGenusc nine\t999\t4000000\t1000\t/x/c.fna\td\n")
+    assert applier.main([str(_corrections(tmp_path)), str(p), "--dry-run"]) == 0
+    assert "unused correction: GCA_1.1" in capsys.readouterr().err
 
 
 def test_missing_columns_in_target_is_an_error(tmp_path):

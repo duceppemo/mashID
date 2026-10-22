@@ -15,6 +15,62 @@
   each shared hash to one reference only, a wrongly named reference that wins by a few hashes also
   pushes the correct ones far down the hit list, so the runner-up's identity understates how well
   it matched.
+- `--confusable` paired a species with its own subspecies and called them different organisms: two
+  fifths of the `mycobacteriaceae` table (767 of 1,993 rows) and the two commonest notes the
+  database produced, "*M. avium* subsp. *hominissuis* not separable from *M. avium*" and the
+  *M. abscessus* equivalent, neither of which says anything. Organism names are now read as a chain
+  of ranks (`mashid/names.py`), so a name and a rank below it are one claim while two ranks below
+  one name still disagree, and `Candidatus`, NCBI's brackets, letter case and the several spellings
+  of `subsp.` are normalised rather than compared. NCBI's `variant` is kept as a difference, because
+  it stands where NCBI used to say species: *M. tuberculosis* against variant *bovis* is the pair
+  the whole check exists for, and it is still reported. 1,226 rows over 313 references for
+  `mycobacteriaceae`, with the whole *M. tuberculosis* complex intact. Applied when a note is built
+  as well as when the table is written, so a database whose published table predates this does not
+  need to be rebuilt or re-downloaded to benefit.
+- `scripts/reannotate_summary.py` truncated `summary_mashID.tsv` to its header, reported success and
+  exited 0 when `mashID_run.json` carried an empty or missing `samples` list — unrecoverable with
+  `--no-backup`. The summary being replaced is now the authority on which rows must survive, and a
+  rebuild that would drop any of them is refused. A malformed `run.json`, one recording no database,
+  a summary without a `Sample` column and a sample entry without a name are now reported as errors
+  instead of raising; a sample listed in the run but absent from the summary warns rather than
+  silently losing its measured columns.
+- `scripts/reannotate_summary.py --dry-run` compared only the `Note` column, so a relabelled
+  reference — the main reason to run it — showed as nothing to do. It now reports changes to
+  `Identification` and `TaxID` as well, and names them.
+- `--fail-on note` help text said "any note" in `mashID --help`, Usage and Pipelines, while the
+  database-wide `Not separable` note is deliberately excluded. A pipeline using it as a gate was
+  gating less than the documentation promised.
+- `scripts/apply_label_corrections.py` raised `IndexError` half-way through rewriting a table if any
+  row's trailing `Bin` field was absent; recomputed the bin at species level whatever rank the
+  `bins.tsv` was binned at, silently flattening a subspecies or serovar bin that drives the next
+  rebuild's dereplication (now `--rank`); left `Confusable_Organism` stale when pointed at a
+  `.confusable.tsv`, which is the column the note is built from; split rows on every character
+  `str.splitlines()` treats as a line break, mangling a `Description` that contained one; and
+  reported nothing when a correction matched no row.
+- `mashID_download_db --no-verify` kept an existing sidecar whatever its checksum, so it could
+  install a new `.confusable.tsv` beside the deposited names it was computed to replace. The two
+  sidecars are now always checksummed — `--no-verify` is there to skip hashing a 284 MB sketch — and
+  each says so when it is replaced.
+- A download cut short mid-stream raised `http.client.IncompleteRead`, which is neither a
+  `URLError` nor an `OSError`, giving a traceback and leaving a `.part` file behind.
+- `mashID_run.json` recorded the sidecars sitting beside the database rather than the ones the run
+  read, so `--db-metadata`/`--db-confusable` were asserted as `null` while demonstrably producing
+  the `Note` column. Both now appear under `database` and under `parameters`.
+- `make_mashID_db --annotate DB --confusable DB` silently discarded `--annotate` and then advised
+  running it; the two now run in that order. `--confusable-distance` is validated as a Mash distance
+  in (0, 1] at parse time rather than failing inside `mash` after the file checks, and naming
+  references from a `--metadata` file that is not the database's own sidecar warns, since mashID
+  will read the sidecar back.
+- `--check`'s genus-synonym report and `--confusable` read names two different ways and could
+  disagree about the same database; both now use `mashid.names`. The bin-name,
+  corrections-table, header-normalising, MD5 and backup helpers had two to four copies each
+  (`mashid/names.py`, `mashid/fileutil.py`).
+- `confusable.compute()` named references through `metadata.get()` where the rest of the pipeline
+  uses `lookup()`, so a sidecar accession whose version differed from the sketch dropped out of the
+  table while every run still named it. Its two logged counters double-counted, because
+  `mash dist db db` emits each pair in both orders. A hand-written `--db-confusable` file with a BOM
+  (Excel writes one) was rejected as missing the `Accession` column, and one stray non-UTF-8 byte
+  raised `UnicodeDecodeError` instead of the error the metadata sidecar gives.
 
 ### Changed
 - `--min-ref-length` defaults to `auto`: 100 kb unless most references of the database are shorter
@@ -35,13 +91,14 @@
   to it rather than its similarity, so two near-identical references look like a landslide rather
   than the near-tie they are. Being a statement about the database and not the sample, the note does
   not count towards `--fail-on note`. The table also sorts mislabelled references to the top: both
-  bad `mycobacteriaceae` references appear in its first 20 of 2102 rows.
+  bad `mycobacteriaceae` references appeared in the first 20 of the 2102 rows the table held before
+  they were corrected.
 - Pre-built databases can publish their `<database>.confusable.tsv` alongside the sketch
   (`confusable_url`/`confusable_md5`/`confusable_size` in the registry), and `mashID_download_db`
   installs it with the database, so the all-pairs computation happens once for whoever built it
   rather than once per user. A database installed before its table was published picks the table up
-  on the next download of that name, without re-fetching the sketch. No registry entry publishes
-  one yet, so nothing is fetched or required until one does.
+  on the next download of that name, without re-fetching the sketch. `mycobacteriaceae` publishes
+  one; a database whose entry does not needs nothing fetched and demands nothing.
 - `curation/label_corrections.tsv`: curated organism names for references that are mislabelled at
   NCBI, with the deposited name and the evidence for each correction recorded alongside.
 - `scripts/bin_by_species.py --corrections`: override the organism NCBI reports before binning, so a

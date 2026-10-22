@@ -31,9 +31,16 @@ scripts/apply_label_corrections.py curation/label_corrections.tsv \
     ~/.local/share/mashID/db/<db>.metadata.tsv <build_dir>/bins.tsv
 ```
 
-It is idempotent and backs each target up. This does not touch the `.msh`, so the reference's own
-FASTA header — the `Description` column mash reports — keeps the deposited name until a rebuild.
-`Identification` and `TaxID` are correct either way.
+It is idempotent and backs each target up. Pass `--rank` if the `bins.tsv` was built below species
+(`bin_by_species.py --rank subspecies|serovar`), or the corrected row's bin is written at species
+level while every other row keeps its rank, and the next rebuild dereplicates against the wrong
+cluster. A `<db>.confusable.tsv` can be given as a target too: it names organisms in two columns and
+both are corrected, since the second is the one the `Note` is built from.
+
+This does not touch the `.msh`, so the reference's own FASTA header — the `Description` column mash
+reports — keeps the deposited name until a rebuild. `Identification` and `TaxID` are correct either
+way. A correction that matches no row of any target is reported on stderr rather than passing
+silently.
 
 ## Upstream status
 
