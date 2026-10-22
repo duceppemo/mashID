@@ -130,14 +130,22 @@ For each reference the table records the closest reference of every *other* orga
 `--confusable-distance` (default 0.005, matching `--ambiguity-margin`), nearest pair first:
 
 ```
-Accession        Organism                 Confusable_Organism       Distance  Nearest_Accession
-GCA_025821985.1  Mycobacterium timonense  M. bouchedurhonense       0.000041  GCA_025822125.1
+Accession        Organism                                  Confusable_Organism             Distance  Nearest_Accession
+GCA_025821985.1  Mycobacterium timonense                   Mycobacterium bouchedurhonense  0.000041  GCA_025822125.1
+GCA_013697125.1  Mycobacterium tuberculosis variant bovis  Mycobacterium tuberculosis      0.000972  GCA_021325765.1
 ```
 
 mashID picks the sidecar up automatically and notes affected calls; `--db-confusable` points at a
 different table. Names are compared as organisms, not as strings, so `Genus sp.` placeholders and the
 same epithet under two genera (*Mycobacterium*/*Mycobacteroides abscessus*) are not reported as
 conflicts.
+
+A name and a rank below it *are* reported, which is two thirds of the rows for `mycobacteriaceae`
+(1306 of 1993). Some of those pairs are the most important thing the table has to say —
+*M. tuberculosis* against *M. tuberculosis* variant *bovis* is the second row above — while others
+are merely redundant, such as *Mycobacteroides abscessus* against *M. abscessus* subsp. *abscessus*.
+The two are the same shape and cannot be told apart without a taxonomy, so both are kept: a
+redundant line in a note costs little, and suppressing the shape would hide the bovis case.
 
 It is an all-pairs comparison, so cost grows with the square of the reference count: 3,534
 references of `mycobacteriaceae` take under two minutes and 850 MB and flag 945 references, but a
@@ -194,7 +202,8 @@ actually belongs to — which is how both `mycobacteriaceae` references got in.
 ```bash
 scripts/bin_by_species.py assembly_data_report.jsonl ncbi_dataset/data binned/ \
     --corrections curation/label_corrections.tsv
-make_mashID_db -i binned/ -o <db>.msh --assembly-report assembly_data_report.jsonl \
+make_mashID_db -i binned/ -o /path/to/db -p my_database \
+    --assembly-report assembly_data_report.jsonl \
     --metadata curation/label_corrections.tsv
 ```
 

@@ -120,6 +120,51 @@ def test_note_is_none_when_nothing_to_say():
     assert note_for("GCA_1.1", "Genusa two", {"GCA_1.1": [Neighbour("Genusa two", 0.001, "x")]}) is None
 
 
+def test_load_finds_the_sidecar_or_returns_none(tmp_path):
+    from mashid.confusable import load
+    db = tmp_path / "db.msh"
+    db.write_bytes(b"not really a sketch")
+    assert load(db, None) is None                      # no sidecar: the check is simply off
+    write(confusable_path(db), {"GCA_1.1": [Neighbour("Genusa two", 0.001, "GCA_2.1")]}, _metadata())
+    assert list(load(db, None)) == ["GCA_1.1"]
+    other = tmp_path / "elsewhere.tsv"
+    write(other, {"GCA_9.9": [Neighbour("Genusa two", 0.001, "GCA_2.1")]}, _metadata())
+    assert list(load(db, other)) == ["GCA_9.9"]        # explicit override wins
+
+
+def test_load_warns_when_the_table_predates_the_database(tmp_path, caplog):
+    import os
+
+    from mashid.confusable import load
+    db = tmp_path / "db.msh"
+    db.write_bytes(b"not really a sketch")
+    table = confusable_path(db)
+    write(table, {"GCA_1.1": [Neighbour("Genusa two", 0.001, "GCA_2.1")]}, _metadata())
+    os.utime(table, (1, 1))                            # table older than the database
+    with caplog.at_level("WARNING"):
+        assert load(db, None) is not None
+    assert "older than the database" in caplog.text
+
+
+def test_an_empty_table_is_not_an_error(tmp_path):
+    from mashid.confusable import load
+    db = tmp_path / "db.msh"
+    db.write_bytes(b"not really a sketch")
+    write(confusable_path(db), {}, _metadata())
+    table = load(db, None)
+    assert table == {}
+    assert note_for("GCA_1.1", "Genusa one", table) is None
+
+
+def test_confusable_distance_must_be_positive(tmp_path):
+    from mashid.makedb import confusable_database
+    db = tmp_path / "db.msh"
+    db.write_bytes(b"not really a sketch")
+    write(confusable_path(db), {}, _metadata())
+    with pytest.raises(MashIDError, match="greater than 0"):
+        confusable_database(db, None, 1, 0.0)
+
+
 def test_note_omits_organisms_already_reported():
     table = {"GCA_1.1": [Neighbour("Genusa two", 0.001, "GCA_2.1"),
                          Neighbour("Genusa three", 0.002, "GCA_3.1")]}

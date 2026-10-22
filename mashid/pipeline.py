@@ -363,6 +363,9 @@ def database_info(database: Path, metadata: dict[str, DbEntry] | None, md5: bool
         "md5": _md5(database) if md5 else None,
         "references": len(metadata) if metadata else None,
         "metadata_file": str(sidecar_path(database)) if sidecar_path(database).is_file() else None,
+        # The Note column depends on this table, so it belongs in the run's provenance.
+        "confusable_file": (str(confusable_mod.confusable_path(database))
+                            if confusable_mod.confusable_path(database).is_file() else None),
     }
     return info
 

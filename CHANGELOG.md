@@ -6,7 +6,7 @@
 - Two references in the `mycobacteriaceae` database carried the organism name they were deposited
   under at NCBI, which is wrong in both cases, so samples of those species were misidentified:
   `GCA_013697125.1` ("Mycobacterium canetti") is *M. tuberculosis* variant *bovis* — it shares the
-  bovis-exclusive RD4 deletion and sits 0.001 from *M. bovis* against 0.004-0.018 for genuine
+  bovis-exclusive RD4 deletion and sits 0.001 from *M. bovis* against 0.005-0.018 for all 19 genuine
   *M. canettii*; `GCA_025822535.1` ("Mycolicibacterium goodii") is *M. wolinskyi* at 99.06% ANI,
   against 80.59% to the *M. goodii* type — no closer than the *M. smegmatis* outgroup. Both are
   corrected in `curation/label_corrections.tsv`. Because Mash's winner-take-all strategy credits
