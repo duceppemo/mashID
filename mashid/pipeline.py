@@ -403,8 +403,12 @@ def write_run_info(path: Path, settings: Settings, database: Path, metadata: dic
             "ambiguity_margin": settings.ambiguity_margin,
             "min_ref_length": settings.min_ref_length,
             "skip_stats": settings.skip_stats,
-            "db_metadata": str(settings.db_metadata) if settings.db_metadata else None,
-            "db_confusable": str(settings.db_confusable) if settings.db_confusable else None,
+            # Absolute: these are read back by scripts/reannotate_summary.py, which runs from
+            # wherever the user happens to be, and a bare "curated.tsv" would resolve against that
+            # directory instead -- silently picking up a different file, or none.
+            "db_metadata": str(settings.db_metadata.absolute()) if settings.db_metadata else None,
+            "db_confusable": (str(settings.db_confusable.absolute())
+                              if settings.db_confusable else None),
             "threads": settings.threads,
             "parallel": settings.parallel,
             "fail_on": settings.fail_on,

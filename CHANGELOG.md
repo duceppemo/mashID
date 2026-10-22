@@ -84,20 +84,33 @@
   reverts the curated label corrections and discards all 3,534 TaxIDs. For a database in the
   registry they now point at `mashID_download_db <name>`, which refetches the published sidecars and
   leaves the 284 MB sketch alone, and `make_mashID_db --annotate` keeps a dated copy of any sidecar
-  it replaces. The warnings are easy to trigger without rebuilding anything — a directory moved
+  it replaces (only `--annotate`: a fresh build writes its own sidecar and has nothing worth
+  keeping). The warnings are easy to trigger without rebuilding anything — a directory moved
   without preserving timestamps is enough — so the advice mattered more than the warning.
 - `mashID_download_db` streamed every download through one `<name>.part`, so two processes
   installing the same database at once — two cluster jobs each fetching it on first use — wrote into
   the same partial file: the second truncated what the first was still writing, one died with an
   uncaught `FileNotFoundError`, and whichever finished first could publish a file with a hole of
   zeros in it under a checksum taken from its own complete stream. Each download now uses a unique
-  temporary file, and an interrupted one cleans up after itself.
+  temporary file, installs it mode 0644 (a temporary file is created 0600, which `os.replace` would
+  carry over, leaving a database only the user who downloaded it could read — useless for the shared
+  `MASHID_DB_DIR` that the cluster case depends on), closes its file descriptor even when the
+  connection is refused, and sweeps any temporary file of its own destination left behind by a
+  download that was killed outright. A temporary file younger than a day is never swept, since it
+  may belong to a download running in another process.
 - `scripts/reannotate_summary.py` ignored the `--db-metadata`/`--db-confusable` a run was made with
   and re-annotated from the sidecars beside the `.msh`, undoing exactly what the override was for
   and reporting the regression as a change. It now uses the tables the run recorded, errors if one
-  has since gone missing, and records in the JSON which tables it used and which samples moved. A
-  run that is already up to date is left alone instead of being rewritten, re-backed-up and stamped
-  with a re-annotation that changed nothing.
+  has since gone missing, and records in the JSON which tables it used and which samples moved.
+  `--database` still reads a given database's own sidecars, for a database that has moved, but now
+  says that it is setting the recorded table aside rather than doing it silently. A run that is
+  already up to date is left alone instead of being rewritten, re-backed-up and stamped with a
+  re-annotation that changed nothing — unless the `_mqc.tsv` or the JSON is missing, which is work
+  to do however current the TSV looks.
+- `mashID_run.json` recorded `--db-metadata`/`--db-confusable` exactly as typed, so a relative path
+  read back by `scripts/reannotate_summary.py` resolved against whatever directory that script ran
+  from: a different file of the same name, silently, or a spurious "no longer exists". They are
+  recorded absolute, and a relative one from an older run is refused rather than guessed at.
 - A download cut short mid-stream raised `http.client.IncompleteRead`, which is neither a
   `URLError` nor an `OSError`, giving a traceback and leaving a `.part` file behind.
 - `mashID_run.json` recorded the sidecars sitting beside the database rather than the ones the run

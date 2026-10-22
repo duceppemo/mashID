@@ -71,16 +71,24 @@ def load_annotations(metadata: Path | None, assembly_report: Path | None) -> dic
     return annotations
 
 
-def write_sidecar(database: Path, annotations: dict[str, tuple[str, str]], exe: str) -> Path:
-    """Write <db>.metadata.tsv from the sketches in the database plus optional annotations."""
+def write_sidecar(database: Path, annotations: dict[str, tuple[str, str]], exe: str,
+                  keep_replaced: bool = False) -> Path:
+    """Write <db>.metadata.tsv from the sketches in the database plus optional annotations.
+
+    ``keep_replaced`` backs up an existing sidecar first. It is set on the ``--annotate`` path,
+    which rewrites the sidecar of a database somebody is already using: without ``--metadata`` the
+    names come from the sketch headers alone, so it replaces curated organism names and every TaxID
+    with whatever the fasta headers said. A fresh build writes its own sidecar and has nothing worth
+    keeping, so it does not litter the output directory on every re-run.
+    """
     entries, unannotated = entries_from_sketches(info_table(database, exe), annotations)
     path = sidecar_path(database)
-    if path.is_file():
-        # Without --metadata the names come from the sketch headers alone, so this replaces curated
-        # organism names and every TaxID with whatever the fasta headers said. Keep a copy: on a
-        # downloaded database that is the difference between a corrected label and the deposited one.
-        log.warning("Replacing the existing sidecar %s; a copy is kept at %s",
-                    path.name, backup(path).name)
+    if keep_replaced and path.is_file():
+        try:
+            log.warning("Replacing the existing sidecar %s; a copy is kept at %s",
+                        path.name, backup(path).name)
+        except OSError as exc:
+            raise MashIDError(f"Could not back up {path} before replacing it: {exc}") from exc
     write_metadata(path, entries)
     if annotations and unannotated:
         log.warning("%d of %d reference(s) had no entry in the provided metadata; their names were parsed "
@@ -232,7 +240,8 @@ def annotate_database(database: Path, metadata: Path | None, assembly_report: Pa
     exe = find_mash()
     if not database.is_file():
         raise MashIDError(f"Mash database not found: {database}")
-    return write_sidecar(database, load_annotations(metadata, assembly_report), exe)
+    return write_sidecar(database, load_annotations(metadata, assembly_report), exe,
+                         keep_replaced=True)
 
 
 def confusable_database(database: Path, metadata: Path | None, threads: int,

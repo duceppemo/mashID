@@ -8,6 +8,7 @@ import logging
 import os
 import shutil
 import tempfile
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -243,6 +244,28 @@ def _human(n: float) -> str:
     return f"{n:.1f} GB"
 
 
+_PART_PREFIX = ".part-"
+# Only sweep temporary files old enough that no live download could own one. A shorter window would
+# delete the partial file of a download running in another process, which is what unique names fixed.
+_STALE_PART_AGE = 24 * 3600
+
+
+def _sweep_stale_parts(dest: Path) -> None:
+    """Remove this destination's abandoned temporary files, left by a killed download.
+
+    Cleanup on the way out only covers exceptions; SIGKILL from a scheduler's walltime limit leaves
+    the partial file behind, and for a 284 MB sketch that is worth reclaiming.
+    """
+    cutoff = time.time() - _STALE_PART_AGE
+    for leftover in dest.parent.glob(dest.name + _PART_PREFIX + "*"):
+        try:
+            if leftover.is_file() and leftover.stat().st_mtime < cutoff:
+                leftover.unlink()
+                log.info("Removed an abandoned partial download: %s", leftover.name)
+        except OSError as exc:  # someone else's file, or a racing cleanup: not our problem
+            log.debug("Could not remove %s (%s)", leftover, exc)
+
+
 def _fetch(url: str, dest: Path, size: int, md5: str | None, verify: bool) -> None:
     """Stream ``url`` to ``dest`` through a temporary file, verifying the MD5 when given.
 
@@ -254,13 +277,16 @@ def _fetch(url: str, dest: Path, size: int, md5: str | None, verify: bool) -> No
     """
     log.info("Downloading %s (%s) from %s", dest.name, _human(size), url)
     dest.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(dir=dest.parent, prefix=dest.name + ".part-")
+    _sweep_stale_parts(dest)
+    fd, tmp_name = tempfile.mkstemp(dir=dest.parent, prefix=dest.name + _PART_PREFIX)
     tmp = Path(tmp_name)
     digest = hashlib.md5()
     received = 0
     request = urllib.request.Request(url, headers={"User-Agent": f"mashID/{__version__}"})
     try:
-        with urllib.request.urlopen(request, timeout=60) as response, os.fdopen(fd, "wb") as out:
+        # os.fdopen first, so the descriptor is owned by a context manager before anything that can
+        # raise: evaluated after urlopen() in one `with`, a refused connection leaked it every time.
+        with os.fdopen(fd, "wb") as out, urllib.request.urlopen(request, timeout=60) as response:
             next_report = 0.1
             while True:
                 chunk = response.read(_CHUNK)
@@ -277,6 +303,10 @@ def _fetch(url: str, dest: Path, size: int, md5: str | None, verify: bool) -> No
                 f"Checksum mismatch for {dest.name}: expected {md5}, got {digest.hexdigest()}. "
                 "The download may be corrupted or the remote file may have changed."
             )
+        # mkstemp creates the file 0600 and os.replace carries that mode over, which would install
+        # a database only its downloader can read -- useless for the shared MASHID_DB_DIR the
+        # cluster case above depends on. A database is read-only reference data, so 0644.
+        os.chmod(tmp, 0o644)
         # Atomic, so an interrupted download never leaves a half-written database in place.
         os.replace(tmp, dest)
     # http.client.IncompleteRead -- a response cut short mid-stream -- is neither a URLError nor an
