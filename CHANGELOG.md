@@ -92,12 +92,15 @@
   the same partial file: the second truncated what the first was still writing, one died with an
   uncaught `FileNotFoundError`, and whichever finished first could publish a file with a hole of
   zeros in it under a checksum taken from its own complete stream. Each download now uses a unique
-  temporary file, installs it mode 0644 (a temporary file is created 0600, which `os.replace` would
-  carry over, leaving a database only the user who downloaded it could read — useless for the shared
-  `MASHID_DB_DIR` that the cluster case depends on), closes its file descriptor even when the
-  connection is refused, and sweeps any temporary file of its own destination left behind by a
-  download that was killed outright. A temporary file younger than a day is never swept, since it
-  may belong to a download running in another process.
+  temporary file, created with `O_CREAT | O_EXCL` so that the kernel applies the user's umask as it
+  goes (`tempfile.mkstemp` creates 0600 and `os.replace` carries that over, which left a database
+  only the user who downloaded it could read — useless for the shared `MASHID_DB_DIR` the cluster
+  case depends on — while a `chmod` afterwards both ignored the umask and, on a filesystem that
+  refuses one, threw away a complete and verified transfer blaming the download). It also closes its
+  file descriptor when the connection is refused, and `mashID_download_db` sweeps temporary files
+  left behind by a download that was killed outright, including on a run that finds everything
+  already installed. One younger than a day is never swept, since it may belong to a download
+  running in another process, and the destination's name is matched literally rather than as a glob.
 - `scripts/reannotate_summary.py` ignored the `--db-metadata`/`--db-confusable` a run was made with
   and re-annotated from the sidecars beside the `.msh`, undoing exactly what the override was for
   and reporting the regression as a change. It now uses the tables the run recorded, errors if one

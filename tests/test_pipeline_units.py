@@ -143,6 +143,27 @@ def test_run_info_records_the_sidecar_overrides(tmp_path, monkeypatch):
     assert params["db_confusable"] == str(tmp_path / "c.tsv")
 
 
+def test_run_info_records_the_overrides_absolute(tmp_path, monkeypatch):
+    """scripts/reannotate_summary.py reads these back from wherever it happens to run, so a bare
+    'curated.tsv' would resolve against that directory: a different file, or none."""
+    import json
+    from pathlib import Path
+
+    from mashid import pipeline
+    from mashid.pipeline import Settings, write_run_info
+    monkeypatch.setattr(pipeline, "mash_version", lambda exe: "2.3")
+    db = tmp_path / "db.msh"
+    db.write_bytes(b"not really a sketch")
+    monkeypatch.chdir(tmp_path)
+    settings = Settings(input=tmp_path, output=tmp_path, database=db,
+                        db_metadata=Path("curated.tsv"), db_confusable=Path("conf.tsv"))
+    path = tmp_path / "mashID_run.json"
+    write_run_info(path, settings, db, None, [], "mash", 0.0, 0)
+    params = json.loads(path.read_text())["parameters"]
+    for key in ("db_metadata", "db_confusable"):
+        assert Path(params[key]).is_absolute(), params[key]
+
+
 def test_database_wide_note_does_not_trip_fail_on_note():
     from mashid.confusable import NOTE_PREFIX
     from mashid.pipeline import actionable_notes, exit_code_for

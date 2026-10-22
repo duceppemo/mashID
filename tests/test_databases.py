@@ -271,8 +271,8 @@ def test_two_downloads_at_once_do_not_write_into_one_partial_file(monkeypatch, t
 
 
 def test_installed_files_are_readable_by_everyone(tmp_path, http_file, monkeypatch):
-    """mkstemp creates 0600 and os.replace carries the mode over, which would install a database
-    only its downloader can read -- and the shared MASHID_DB_DIR case is the whole point."""
+    """tempfile.mkstemp creates 0600 and os.replace carries the mode over, which would install a
+    database only its downloader can read -- and the shared MASHID_DB_DIR case is the whole point."""
     import stat
 
     url, payload, md5 = http_file
@@ -288,10 +288,17 @@ def test_installed_files_are_readable_by_everyone(tmp_path, http_file, monkeypat
         assert mode & stat.S_IRGRP and mode & stat.S_IROTH, f"{name} is {oct(mode)}"
 
 
-def test_a_failed_download_does_not_leak_a_descriptor(tmp_path, monkeypatch):
-    """mkstemp's fd is only adopted by os.fdopen. Evaluated after urlopen() in one `with`, a
-    refused connection leaked it on every attempt."""
+def _open_fd_count():
+    """How many descriptors this process holds. /dev/fd works on Linux and macOS alike."""
     import os
+    if not Path("/dev/fd").is_dir():
+        pytest.skip("no /dev/fd on this platform")
+    return len(os.listdir("/dev/fd"))
+
+
+def test_a_failed_download_does_not_leak_a_descriptor(tmp_path, monkeypatch):
+    """The temporary file's fd is only adopted by os.fdopen. Evaluated after urlopen() in one
+    `with`, a refused connection leaked it on every attempt."""
     import urllib.error
     import urllib.request
 
@@ -301,12 +308,45 @@ def test_a_failed_download_does_not_leak_a_descriptor(tmp_path, monkeypatch):
         raise urllib.error.URLError("connection refused")
 
     monkeypatch.setattr(urllib.request, "urlopen", refuse)
-    before = len(os.listdir("/proc/self/fd"))
+    before = _open_fd_count()
     for _ in range(5):
         with pytest.raises(MashIDError, match="failed"):
             _fetch("http://localhost:1/x.msh", tmp_path / "x.msh", 10, None, True)
-    assert len(os.listdir("/proc/self/fd")) == before
+    assert _open_fd_count() == before
     assert not list(tmp_path.glob("*.part-*"))
+
+
+def test_a_download_survives_a_filesystem_that_refuses_chmod(tmp_path, http_file, monkeypatch):
+    """vfat and some bind mounts return EPERM for chmod. Calling one after a complete, verified
+    284 MB transfer threw the whole install away and blamed the download."""
+    import os
+
+    def refuse(*a, **k):
+        raise PermissionError(1, "Operation not permitted")
+
+    monkeypatch.setattr(os, "chmod", refuse)
+    url, payload, md5 = http_file
+    from mashid.databases import _fetch
+    dest = tmp_path / "out" / "fake.msh"
+    _fetch(url, dest, len(payload), md5, True)
+    assert dest.read_bytes() == payload
+
+
+def test_installed_files_honour_the_umask(tmp_path, http_file):
+    """The mode comes from O_CREAT with the umask applied by the kernel, not from a chmod to a
+    fixed value: a site that enforces umask 027 for group-only data keeps that."""
+    import os
+    import stat
+
+    url, payload, md5 = http_file
+    from mashid.databases import _fetch
+    old = os.umask(0o027)
+    try:
+        dest = tmp_path / "out" / "fake.msh"
+        _fetch(url, dest, len(payload), md5, True)
+    finally:
+        os.umask(old)
+    assert stat.S_IMODE(dest.stat().st_mode) == 0o640
 
 
 def test_an_abandoned_partial_download_is_swept_but_a_live_one_is_not(tmp_path, http_file):
@@ -331,6 +371,45 @@ def test_an_abandoned_partial_download_is_swept_but_a_live_one_is_not(tmp_path, 
     assert not old.exists()                 # a day-old leftover of this destination goes
     assert fresh.exists()                   # one that could still be in use stays
     assert other.exists()                   # another destination's is none of our business
+
+
+def test_an_abandoned_partial_is_swept_even_when_everything_is_installed(monkeypatch, tmp_path,
+                                                                         http_file):
+    """The common case is a walltime kill, then a resubmit that finds the database installed and
+    returns before _fetch -- so sweeping only inside _fetch reclaimed nothing."""
+    import os
+
+    url, payload, md5 = http_file
+    monkeypatch.setitem(REGISTRY, "swept", RemoteDatabase("swept", "fake.msh", url, md5,
+                                                          len(payload), "t", "d"))
+    dest_dir = tmp_path / "dbs"
+    download("swept", dest_dir)
+    killed = dest_dir / "fake.msh.part-killed"
+    killed.write_bytes(b"left by a SIGKILL")
+    os.utime(killed, (0, 0))
+    download("swept", dest_dir)              # reports "already installed" and returns
+    assert not killed.exists()
+    assert (dest_dir / "fake.msh").read_bytes() == payload
+
+
+def test_the_sweep_reads_the_destination_name_literally(tmp_path, http_file):
+    """A database named my[old].msh would otherwise glob as a character class and sweep the
+    temporary files of other destinations instead of its own."""
+    import os
+
+    url, payload, md5 = http_file
+    dest_dir = tmp_path / "dbs"
+    dest_dir.mkdir()
+    mine = dest_dir / "my[old].msh.part-aaa"
+    theirs = dest_dir / "myo.msh.part-bbb"
+    for p in (mine, theirs):
+        p.write_bytes(b"stale")
+        os.utime(p, (0, 0))
+
+    from mashid.databases import _fetch
+    _fetch(url, dest_dir / "my[old].msh", len(payload), md5, True)
+    assert not mine.exists()                 # its own goes
+    assert theirs.exists()                   # a name that only matches as a class does not
 
 
 def test_a_truncated_transfer_is_a_clean_error(monkeypatch, tmp_path, http_file):
