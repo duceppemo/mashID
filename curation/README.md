@@ -107,7 +107,7 @@ single genomospecies, *Shigella* is polyphyletic inside *E. coli*, and NCBI's AN
 | `refseq_viral` | 19625 | 765 over 421 refs | none; see below |
 | `brucella` | 387 | 1772 over 147 refs | 3 |
 | `salmonella` | 1442 | 803 over 267 refs | 17 |
-| `escherichia` | 4503 | 2356 over 1631 refs | 1 |
+| `escherichia` | 4503 | 2356 over 1631 refs | 2 |
 
 The decisive tests were MLST-9 for *Brucella* (`mlst --scheme brucella`), the Achtman *E. coli*
 scheme for *Shigella*, and SISTR cgMLST for *Salmonella*, each run against controls drawn from the
@@ -127,6 +127,17 @@ subsp. *enterica* serovar Cerro) and `GCF_001832525.1` (deposited *diarizonae* 3
 already corrected here, so they arrive in submission batches. Re-audit the rare subspecies labels on
 every rebuild; an audit of the previous database does not cover the new assemblies.
 
+**Mislabels come in submission batches, so check the batch, not the record.** The same thing happened
+in `escherichia` on the same rebuild, which is why that row says 2: correcting `GCF_002290495.1` from
+*S. flexneri* to *S. sonnei* collapsed its 0.000074 cross-name pair, and the rebuilt database
+immediately showed a 0.000036 pair in its place, against `GCF_002290505.1` — the consecutive
+accession, same submitter, same release date, same wrong name. One correction had exposed the next.
+After adding a row, list its submitter and release date from the assembly report and type the whole
+batch; here the other ten members of the JCVI September 2017 *Shigella* batch were spread over nine
+unrelated STs and needed nothing, but that is a result, not an assumption. The cheap signal that a
+correction is incomplete is a sub-dereplication-threshold cross-name pair surviving a rebuild: the
+corrected reference should have no near namesake left under a different name.
+
 **What `match_status` is worth.** For those 102 references, `subspecies_match` was never wrong (0 of
 13), so it is a sound positive signal. The converse is not: 55 of the 70 conclusive labels carrying
 `species_match` or `derived_species_match` are nonetheless correct, so demanding
@@ -139,6 +150,13 @@ are 0.000096 apart and share ST405. *S. sonnei* is dominated by ST152 (8 of 14 s
 *sonnei* control is ST405, so the *sonnei* label is the implausible one; but *S. boydii* spans 11 STs
 in 14 genomes, so ST405 cannot be positively assigned and neither row meets the bar above.
 `GCF_002266055.1` (*arizonae*) matched only 85 cgMLST alleles, too few to call.
+`GCF_002290485.1` (*S. boydii*) and `GCF_002317875.1` (*S. sonnei*) share ST877 and all seven
+alleles, but sit 0.003349 apart and each is nearer an *E. coli* reference than the other, so a
+shared seven-locus profile at that distance is ordinary *Shigella*/*E. coli* polyphyly rather than
+the signature of a mislabel — contrast the 0.000036 of the pair above. Two more members of that
+batch carry STs typical of *E. coli* rather than their deposited species (`GCF_002317065.1`
+*S. sonnei* ST10, `GCF_002317935.1` *S. boydii* ST48), which is negative evidence only and does not
+meet the bar.
 
 **`refseq_viral` has no mislabels.** Its 20 distance-zero pairs are 7 RefSeq `AC_`/`NC_` curated
 duplicates of one virus under an old and a current ICTV name (`AC_000007.1` "Human adenovirus 2" and
