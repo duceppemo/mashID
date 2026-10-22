@@ -62,7 +62,7 @@ page walks through the results.
 
 ## Databases
 
-No database is bundled. Download the default one (284 MB) after installing:
+No database is bundled. Download the default one (272 MB, sketch and sidecars) after installing:
 
 ```bash
 mashID_download_db mycobacteriaceae

@@ -33,7 +33,7 @@ screened together.
 conda create -n mashID -c conda-forge -c bioconda mashid
 conda activate mashID
 
-mashID_download_db mycobacteriaceae          # 284 MB, MD5-verified
+mashID_download_db mycobacteriaceae          # 272 MB, MD5-verified
 mashID -i /path/to/fastq_or_fasta -o results
 ```
 
