@@ -182,6 +182,21 @@ references carry.
 The rule is applied both when the table is written and when a note is built from it, so a table
 produced by an earlier version, or by hand, cannot reintroduce those rows.
 
+These are still names being compared, not a taxonomy, and two cases cannot be settled from the
+strings alone:
+
+- **The same epithet under two genera is read as a rename.** For bacteria within
+  `--confusable-distance` that is almost always right — two genera really 99.5% identical are one
+  renamed taxon — but it is an assumption, and it is wrong wherever the first word is not a genus.
+  In `refseq_viral`, where the first word is a host or a place, *Aeromonas phage D3* and
+  *Pseudomonas phage D3*, or *Wuhan* and *Xingshan cricket virus*, are read as one organism. It also
+  blinds the mislabel use below to a genome deposited under a homonym (*Camelimonas abortus* for
+  *Brucella abortus*).
+- **One taxon under NCBI's old and new spelling** — *Mycobacterium bovis* and *M. tuberculosis*
+  variant *bovis* — is reported as a conflict. The shipped `mycobacteriaceae` sidecar uses one
+  spelling throughout, but a database built from an older NCBI dump, or a hand-written correction,
+  can mix them. `make_mashID_db --check` lists such pairs; harmonise them with `--metadata`.
+
 ### Cost, and reading the table for mislabels
 
 It is an all-pairs comparison, so cost grows with the square of the reference count: 3,534

@@ -25,7 +25,7 @@ from mashid import MashIDError
 from mashid.fileutil import sidecar_for
 from mashid.mash import dist_pairs
 from mashid.metadata import NA, DbEntry, accession_from_query_id, lookup, sidecar_path
-from mashid.names import distinguishable, open_table
+from mashid.names import binomial, distinguishable, open_table
 
 log = logging.getLogger(__name__)
 
@@ -73,12 +73,18 @@ def compute(database: Path, metadata: dict[str, DbEntry], threads: int = 1,
         raise MashIDError(f"No reference metadata for {database}; write the sidecar first with "
                           f"make_mashID_db --annotate")
 
+    # Memoised: every reference comes back once per pair in an already O(n^2) loop, and lookup()'s
+    # version-less fallback is a linear scan of the sidecar on each miss.
+    named: dict[str, tuple[str, str]] = {}
+
     def organism_of(query_id: str) -> tuple[str, str]:
-        accession = accession_from_query_id(query_id)
-        # lookup(), not metadata.get(): it also matches a sidecar accession whose version differs,
-        # which is what the rest of the pipeline does when it names the same reference.
-        entry = lookup(metadata, accession)
-        return accession, (entry.organism if entry is not None else NA)
+        if query_id not in named:
+            accession = accession_from_query_id(query_id)
+            # lookup(), not metadata.get(): it also matches a sidecar accession whose version
+            # differs, which is what the rest of the pipeline does when naming the same reference.
+            entry = lookup(metadata, accession)
+            named[query_id] = (accession, entry.organism if entry is not None else NA)
+        return named[query_id]
 
     best: dict[str, dict[str, Neighbour]] = {}
     unnamed: set[str] = set()
@@ -189,16 +195,19 @@ def note_for(accession: str, organism: str, table: dict[str, list[Neighbour]] | 
 
     Names are filtered through ``distinguishable()`` here as well as when the table is computed, so
     that a table built by an older version -- or by hand -- cannot report a name that is only the
-    call itself at another rank.
+    call itself at another rank. When the top hit has no name of its own -- a reference the metadata
+    sidecar does not know -- nothing can be ruled out, so every neighbour is reported rather than
+    none.
     """
     if not table:
         return None
     exclude = exclude or set()
+    unnamed_call = binomial(organism) is None
     names: list[str] = []
     for neighbour in table.get(accession, []):
         if neighbour.organism in exclude or neighbour.organism in names:
             continue
-        if not distinguishable(organism, neighbour.organism):
+        if not unnamed_call and not distinguishable(organism, neighbour.organism):
             continue
         names.append(neighbour.organism)
     if not names:

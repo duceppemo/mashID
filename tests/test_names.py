@@ -168,6 +168,23 @@ def test_open_table_handles_a_bom_and_sniffs_the_delimiter(tmp_path):
     assert next(iter(open_table(csv_path)))["Organism"] == "Genusa one"
 
 
+@pytest.mark.parametrize("char", ["\x0b", "\x0c", "\x1c", "\x1e", "\x85", " "])
+def test_open_table_only_breaks_rows_on_a_newline(tmp_path, char):
+    """str.splitlines() breaks on all of these, and any can reach a Description from a fasta
+    header: the row would end early and its tail would read as a second, phantom reference."""
+    p = tmp_path / "a.tsv"
+    p.write_text(f"Accession\tOrganism\tDescription\nGCA_1.1\tGenusa one\tCP1{char}odd\n")
+    rows = list(open_table(p))
+    assert len(rows) == 1
+    assert rows[0]["Description"] == f"CP1{char}odd"
+
+
+def test_open_table_tolerates_crlf_and_a_missing_final_newline(tmp_path):
+    p = tmp_path / "a.tsv"
+    p.write_text("Accession\tOrganism\r\nGCA_1.1\tGenusa one\r\nGCA_2.1\tGenusa two")
+    assert [r["Organism"] for r in open_table(p)] == ["Genusa one", "Genusa two"]
+
+
 def test_open_table_rejects_bad_bytes_and_empty_files(tmp_path):
     bad = tmp_path / "bad.tsv"
     bad.write_bytes(b"Accession\tOrganism\nGCA_1.1\tCaf\xe9 one\n")

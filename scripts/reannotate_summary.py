@@ -31,6 +31,7 @@ import dataclasses
 import datetime as dt
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 
 try:
@@ -143,11 +144,23 @@ def rebuild(results_dir: Path, database: Path | None = None) -> tuple[list[Sampl
     # Sequences/Bases and any sample-sheet columns live only in the summary; carry them over.
     with summary_path.open(newline="", encoding="utf-8-sig") as fh:
         reader = csv.DictReader(fh, delimiter="\t")
-        columns = list(reader.fieldnames or SUMMARY_COLUMNS)
-        if "Sample" not in columns:
-            raise MashIDError(f"{summary_path} has no Sample column; found {columns}")
-        existing = {row["Sample"]: row for row in reader}
-    extra_columns = [c for c in columns if c not in SUMMARY_COLUMNS]
+        found = list(reader.fieldnames or SUMMARY_COLUMNS)
+        if "Sample" not in found:
+            raise MashIDError(f"{summary_path} has no Sample column; found {found}")
+        rows_read = list(reader)
+        existing = {row["Sample"]: row for row in rows_read}
+    if len(existing) != len(rows_read):
+        # Two rows for one sample: the second would win silently and the first disappear.
+        counts = Counter(row["Sample"] for row in rows_read)
+        repeated = sorted(name for name, n in counts.items() if n > 1)
+        raise MashIDError(f"{summary_path.name} has more than one row for "
+                          f"{', '.join(repr(r) for r in repeated[:5])}; rewriting it would keep only "
+                          f"one of each. Refusing to write.")
+    extra_columns = [c for c in found if c not in SUMMARY_COLUMNS]
+    # The column set is mashID's own plus whatever the sample sheet added, exactly as run() builds
+    # it -- not the old summary's columns. A summary written before a column existed would otherwise
+    # have it dropped again here, and `Note` is the column this script most often has to add.
+    columns = list(SUMMARY_COLUMNS) + extra_columns
 
     # The sample list comes from the run record, but the summary being replaced is the authority on
     # which rows must survive: a run.json with an empty or renamed "samples" key would otherwise
@@ -159,7 +172,8 @@ def rebuild(results_dir: Path, database: Path | None = None) -> tuple[list[Sampl
         raise MashIDError(
             f"{run_info_path.name} lists {len(named)} sample(s) but {summary_path.name} has "
             f"{len(existing)} row(s); rewriting it would drop {len(lost)} of them "
-            f"({', '.join(lost[:5])}{', ...' if len(lost) > 5 else ''}). Refusing to write.")
+            f"({', '.join(repr(n) for n in lost[:5])}{', ...' if len(lost) > 5 else ''}). "
+            f"Refusing to write.")
 
     results, changed = [], []
     for entry in entries:
@@ -189,8 +203,10 @@ def rebuild(results_dir: Path, database: Path | None = None) -> tuple[list[Sampl
 
     rows = [summary_row(r, metadata) for r in results]
     for row in rows:
+        # A column the old summary never had counts as changed: absent is not the same as agreeing,
+        # and treating it as agreement is what made a run predating --confusable look up to date.
         old = existing.get(row["Sample"], {})
-        if any(row[c] != (old.get(c) or "") for c in LOOKED_UP_COLUMNS if c in old):
+        if any(row[c] != (old.get(c) or "") for c in LOOKED_UP_COLUMNS):
             changed.append(row["Sample"])
     return results, rows, columns, database, changed
 

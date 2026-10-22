@@ -30,13 +30,13 @@ from pathlib import Path
 
 try:
     from mashid import MashIDError
-    from mashid.names import BIN_RANKS, normalise_header, species_of
+    from mashid.names import BIN_RANKS, species_of
     from mashid.names import read_corrections as _read_corrections
 except ImportError as exc:  # an installed mashid older than this script, or none at all
     sys.exit(f"error: this script needs the mashid package it ships with, but importing it failed "
              f"({exc}).\nInstall the matching version from the repository root: pip install -e .")
 
-__all__ = ["load_corrections", "main", "normalise_header", "species_of"]
+__all__ = ["load_corrections", "main", "species_of"]
 
 
 def load_corrections(path: Path) -> dict[str, tuple[str, str]]:

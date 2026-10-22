@@ -76,24 +76,36 @@ def apply_to(target: Path, corrections: dict[str, tuple[str, str]], backup: bool
         fields = ln.rstrip("\r").split("\t")
         acc = fields[acc_i] if acc_i < len(fields) else ""
         row_changed = False
-        if acc in corrections and len(fields) > org_i:
+        if acc in corrections:
             matched.add(acc)
+            # Fill a ragged row out to the header before writing to it. Skipping the short ones
+            # instead reported the correction as unused, and correcting only the fields that
+            # happened to be present left a new name beside a stale TaxID.
+            if len(fields) < len(header):
+                fields += [""] * (len(header) - len(fields))
             new_org, new_tax = corrections[acc]
             old_org = fields[org_i]
             if old_org != new_org:
                 fields[org_i] = new_org
                 row_changed = True
-                if tax_i is not None and new_tax and tax_i < len(fields):
+                if tax_i is not None and new_tax:
                     fields[tax_i] = new_tax
-                if bin_i is not None and bin_i < len(fields):
+                if bin_i is not None:
+                    # The old bin says which rank this table was binned at. Recomputing at the
+                    # wrong one leaves this row at a different rank from every other, and the Bin
+                    # column is what the next rebuild dereplicates by.
+                    expected = bin_of(old_org, rank)
+                    if fields[bin_i] and fields[bin_i] != expected:
+                        sys.exit(f"{target}: {acc} has Bin {fields[bin_i]!r}, but --rank {rank} "
+                                 f"gives {expected!r} for its current name. Pass the --rank the "
+                                 f"table was binned at (bin_by_species.py --rank); nothing written.")
                     fields[bin_i] = bin_of(new_org, rank)
-                if desc_i is not None and desc_i < len(fields):
+                if desc_i is not None:
                     note = NOTE.format(old=old_org, new=new_org)
                     if "[mashID:" not in fields[desc_i]:
                         fields[desc_i] += note
-                shown_bin = fields[bin_i] if bin_i is not None and bin_i < len(fields) else None
                 print(f"  {acc}: {old_org!r} -> {new_org!r}"
-                      + (f" (bin {shown_bin})" if shown_bin is not None else ""))
+                      + (f" (bin {fields[bin_i]})" if bin_i is not None else ""))
         # A .confusable.tsv names the other organism in a second column, and that is the one mashID
         # actually reports; correcting only Organism would leave the note itself stale.
         if conf_i is not None and near_i is not None and max(conf_i, near_i) < len(fields):

@@ -55,7 +55,12 @@ def open_table(path: Path) -> csv.DictReader:
         text = path.read_text(encoding="utf-8-sig")
     except UnicodeDecodeError as exc:
         raise MashIDError(f"{path} is not a UTF-8 text table: {exc}") from exc
-    lines = text.splitlines()
+    # Split on newlines only. str.splitlines() also breaks on \r, \x0b, \x0c, \x1c-\x1e, \x85 and
+    # U+2028, any of which can reach a Description field from a fasta header, where they would end
+    # the row early and turn its tail into a phantom reference.
+    lines = [line.rstrip("\r") for line in text.split("\n")]
+    if lines and lines[-1] == "":
+        lines.pop()
     if not lines or not lines[0].strip():
         raise MashIDError(f"{path} is empty")
     delimiter = "\t" if "\t" in lines[0] else ","

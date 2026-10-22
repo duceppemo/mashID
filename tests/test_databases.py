@@ -182,6 +182,48 @@ def test_no_verify_still_refreshes_the_sidecars(monkeypatch, tmp_path, http_file
     assert (dest_dir / "fake.confusable.tsv").read_bytes() == conf_bytes
 
 
+def test_a_sidecar_whose_registry_md5_is_wrong_fails_instead_of_looping(monkeypatch, tmp_path,
+                                                                        http_file):
+    """The decision always hashes the sidecar. If the fetch did not, a registry MD5 that disagrees
+    with what the URL serves would re-download and reinstall the same bytes on every single run,
+    reporting success each time and never converging."""
+    url, payload, md5 = http_file
+    meta_bytes = b"Accession\tOrganism\tTaxID\nX1\tGenusa one\t7\n"
+    remote = RemoteDatabase("wrongmd5", "fake.msh", url, md5, len(payload), "t", "d",
+                            metadata_url=url.replace("fake.msh", "fake.metadata.tsv"),
+                            metadata_md5="0" * 32, metadata_size=len(meta_bytes))
+    monkeypatch.setitem(REGISTRY, "wrongmd5", remote)
+    dest_dir = tmp_path / "dbs"
+    for verify in (True, False):
+        with pytest.raises(MashIDError, match="Checksum mismatch for fake.metadata.tsv"):
+            download("wrongmd5", dest_dir, verify=verify)
+    assert not list(dest_dir.glob("*.part"))
+
+
+def test_an_unreadable_sidecar_is_treated_as_stale(monkeypatch, tmp_path, http_file, caplog):
+    """_up_to_date now hashes the sidecar whatever --no-verify says, so it must survive a file it
+    cannot read rather than raising OSError out of a download."""
+    url, payload, md5 = http_file
+    meta_bytes = b"Accession\tOrganism\tTaxID\nX1\tGenusa one\t7\n"
+    remote = RemoteDatabase("unread", "fake.msh", url, md5, len(payload), "t", "d",
+                            metadata_url=url.replace("fake.msh", "fake.metadata.tsv"),
+                            metadata_md5=hashlib.md5(meta_bytes).hexdigest(),
+                            metadata_size=len(meta_bytes))
+    monkeypatch.setitem(REGISTRY, "unread", remote)
+    dest_dir = tmp_path / "dbs"
+    dest_dir.mkdir()
+    sidecar = dest_dir / "fake.metadata.tsv"
+    sidecar.write_text("unreadable")
+    sidecar.chmod(0o000)
+    try:
+        with caplog.at_level("WARNING"):
+            download("unread", dest_dir, verify=False)
+    finally:
+        sidecar.chmod(0o644)
+    assert "Could not read fake.metadata.tsv" in caplog.text
+    assert sidecar.read_bytes() == meta_bytes
+
+
 def test_a_truncated_transfer_is_a_clean_error(monkeypatch, tmp_path, http_file):
     """http.client.IncompleteRead is neither a URLError nor an OSError, so it used to traceback."""
     import http.client

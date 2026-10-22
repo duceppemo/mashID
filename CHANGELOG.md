@@ -50,7 +50,35 @@
 - `mashID_download_db --no-verify` kept an existing sidecar whatever its checksum, so it could
   install a new `.confusable.tsv` beside the deposited names it was computed to replace. The two
   sidecars are now always checksummed — `--no-verify` is there to skip hashing a 284 MB sketch — and
-  each says so when it is replaced.
+  each says so when it is replaced. Their *downloads* are verified for the same reason: hashing to
+  decide a file is stale while not hashing what replaces it would reinstall the same mismatching
+  bytes on every run, reporting success each time and never converging. A sidecar that cannot be
+  read is treated as out of date rather than raising `OSError`. Because a sidecar whose checksum
+  differs is replaced, local edits to an installed `.metadata.tsv` do not survive a later download
+  of that database; `mashID_download_db`'s docstring and the Databases page now say so.
+- `read_metadata`, `confusable.read` and the corrections readers split rows with `str.splitlines()`,
+  which also breaks on `\r`, `\x0b`, `\x0c`, `\x1c`-`\x1e`, `\x85` and U+2028 — any of which can
+  reach a `Description` from a fasta header, ending the row early and turning its tail into a
+  phantom reference that then inflates the reference count. They now split on newlines only, as
+  `apply_label_corrections.py` already did.
+- `scripts/reannotate_summary.py` took the summary's column set from the file it was replacing, so a
+  run that predated `make_mashID_db --confusable` — the headline case — had no `Note` column, and
+  one was never added: the rewritten `summary_mashID.tsv` came out without it while the `_mqc.tsv`
+  from the same rewrite carried the note. An absent column also counted as agreement, so that run
+  reported nothing to do. The columns are now mashID's own plus the sample sheet's, as a fresh run
+  builds them. A summary holding two rows for one sample is refused instead of silently keeping the
+  second.
+- `scripts/apply_label_corrections.py` skipped a row too short to reach `Organism` and then reported
+  the correction as matching nothing, and corrected only the fields a short row happened to have,
+  leaving a new name beside a stale TaxID. Ragged rows are filled out to the header instead. Passing
+  the wrong `--rank` for a table's `Bin` column is now an error — the existing bin says which rank
+  the table was binned at — rather than a silently flattened bin among unflattened ones.
+- `make_mashID_db --annotate A --confusable B` with a `--metadata` file discarded it for `B`, which
+  has no sidecar of `A`'s to fall back on; `--metadata` is only skipped when both name the same
+  database.
+- `confusable.note_for()` returned no note at all when the top hit's reference was missing from the
+  metadata sidecar, because the new name filter had nothing to judge against. With no name nothing
+  can be ruled out, so every neighbour is reported.
 - A download cut short mid-stream raised `http.client.IncompleteRead`, which is neither a
   `URLError` nor an `OSError`, giving a traceback and leaving a `.part` file behind.
 - `mashID_run.json` recorded the sidecars sitting beside the database rather than the ones the run

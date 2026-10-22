@@ -341,10 +341,12 @@ def main(argv: list[str] | None = None) -> int:
             if args.annotate is not None:
                 annotate_database(args.annotate, args.metadata, args.assembly_report)
             if args.confusable is not None:
-                # After --annotate the sidecar already carries --metadata's names; reading it back
-                # is both correct and what mashID itself will do.
-                names_from = None if args.annotate is not None else args.metadata
-                confusable_database(args.confusable, names_from, threads, args.confusable_distance)
+                # When both name the same database, --annotate has just written --metadata's names
+                # into its sidecar, so reading that back is both correct and what mashID will do.
+                # For a different database, --metadata still has to be honoured.
+                same = args.annotate is not None and args.annotate == args.confusable
+                confusable_database(args.confusable, None if same else args.metadata,
+                                    threads, args.confusable_distance)
         else:
             make_database(args.input, args.output, args.prefix, threads, args.sketch_size, args.kmer_size,
                           metadata=args.metadata, assembly_report=args.assembly_report,
