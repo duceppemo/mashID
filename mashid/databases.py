@@ -33,6 +33,12 @@ class RemoteDatabase:
     metadata_url: str | None = None
     metadata_md5: str | None = None
     metadata_size: int = 0
+    # Optional confusable-reference sidecar (<stem>.confusable.tsv), from make_mashID_db
+    # --confusable. Costs O(n^2) in references to compute, so publishing it with the database
+    # saves every user that work. Without it mashID simply does not report the note.
+    confusable_url: str | None = None
+    confusable_md5: str | None = None
+    confusable_size: int = 0
 
 
 REGISTRY: dict[str, RemoteDatabase] = {
@@ -274,7 +280,7 @@ def _up_to_date(path: Path, md5: str | None, verify: bool) -> bool:
 
 
 def download(name: str, directory: Path | None = None, force: bool = False, verify: bool = True) -> Path:
-    """Download a registry database (and its metadata sidecar, when published) to ``directory``
+    """Download a registry database (and its sidecars, when published) to ``directory``
     (default: db_dir()), verifying MD5 checksums. Existing, matching files are kept."""
     if name not in REGISTRY:
         raise MashIDError(f"Unknown database '{name}'. Available: {', '.join(REGISTRY)}")
@@ -282,18 +288,22 @@ def download(name: str, directory: Path | None = None, force: bool = False, veri
     directory = directory or db_dir()
     dest = directory / remote.filename
     sidecar = directory / (remote.filename[:-4] + ".metadata.tsv")
+    confusable = directory / (remote.filename[:-4] + ".confusable.tsv")
 
     need_db = force or not _up_to_date(dest, remote.md5, verify)
     need_meta = remote.metadata_url is not None and (
         force or not _up_to_date(sidecar, remote.metadata_md5, verify))
+    need_confusable = remote.confusable_url is not None and (
+        force or not _up_to_date(confusable, remote.confusable_md5, verify))
     if dest.is_file() and need_db and not force:
         log.warning("%s exists but its checksum does not match; re-downloading", dest)
-    if not need_db and not need_meta:
+    if not need_db and not need_meta and not need_confusable:
         log.info("%s is already installed: %s", name, dest)
         return dest
 
     directory.mkdir(parents=True, exist_ok=True)
-    needed = (remote.size if need_db else 0) + (remote.metadata_size if need_meta else 0)
+    needed = ((remote.size if need_db else 0) + (remote.metadata_size if need_meta else 0)
+              + (remote.confusable_size if need_confusable else 0))
     free = shutil.disk_usage(directory).free
     if free < needed * 1.1:
         raise MashIDError(f"Not enough free space in {directory}: need {_human(needed)}, have {_human(free)}")
@@ -305,6 +315,11 @@ def download(name: str, directory: Path | None = None, force: bool = False, veri
         assert remote.metadata_url is not None
         _fetch(remote.metadata_url, sidecar, remote.metadata_size, remote.metadata_md5, verify)
         log.info("Installed metadata -> %s", sidecar)
+    if need_confusable:
+        assert remote.confusable_url is not None
+        _fetch(remote.confusable_url, confusable, remote.confusable_size,
+               remote.confusable_md5, verify)
+        log.info("Installed inseparable-organism pairs -> %s", confusable)
     ensure_sidecar(dest)
     return dest
 

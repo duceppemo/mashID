@@ -136,14 +136,19 @@ GCA_013697125.1  Mycobacterium tuberculosis variant bovis  Mycobacterium tubercu
 ```
 
 mashID picks the sidecar up automatically and notes affected calls; `--db-confusable` points at a
-different table. Runs that finished before the table existed do not have to be screened again:
+different table. A pre-built database that publishes the table alongside it installs the table too,
+so the O(n^2) computation only has to happen once, for whoever built the database; `--list` marks a
+database installed on the `.msh` alone, so a database downloaded before its table was published
+picks the table up on the next `mashID_download_db` run for that name. Runs that finished before
+the table existed do not have to be screened again either:
 
 ```bash
 scripts/reannotate_summary.py /path/to/results --dry-run   # then without --dry-run
 ```
 
 rebuilds their summary files from the per-sample tables and the current sidecars, which is also how
-to apply a corrected organism name to results that predate the correction. Names are compared as organisms, not as strings, so `Genus sp.` placeholders and the
+to apply a corrected organism name to results that predate the correction. Names are compared as
+organisms, not as strings, so `Genus sp.` placeholders and the
 same epithet under two genera (*Mycobacterium*/*Mycobacteroides abscessus*) are not reported as
 conflicts.
 

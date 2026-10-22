@@ -35,6 +35,28 @@ It is idempotent and backs each target up. This does not touch the `.msh`, so th
 FASTA header — the `Description` column mash reports — keeps the deposited name until a rebuild.
 `Identification` and `TaxID` are correct either way.
 
+## Upstream status
+
+Both corrections below were reported to GenBank (`gb-admin@ncbi.nlm.nih.gov`, cc
+`genomes@ncbi.nlm.nih.gov`) on 2026-10-22, with the evidence from the `Reason` column, so there is
+no need to file them again. NCBI maintains the ANI flag but not the records themselves, so the
+organism names change only if the submitting groups agree; a report is not a fix.
+
+Check whether anything has changed upstream before trusting the `Checked` date in a `Reason`:
+
+```bash
+for a in GCA_013697125.1 GCA_025822535.1; do
+  curl -s "https://api.ncbi.nlm.nih.gov/datasets/v2/genome/accession/$a/dataset_report" \
+    | python3 -c "import json,sys; r=json.load(sys.stdin)['reports'][0]; \
+        print(r['accession'], '|', r['organism']['organism_name'], '|', \
+              (r.get('average_nucleotide_identity') or {}).get('match_status'))"
+done
+```
+
+If a name is corrected at NCBI, its row here becomes a no-op rather than a conflict — a rebuild
+takes the corrected name from the assembly report and `apply_label_corrections.py` reports zero
+rows changed — so the row can simply be dropped.
+
 ## When to add a row
 
 Only with positive evidence of the true identity, not merely an NCBI ANI flag. Within the
