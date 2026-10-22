@@ -114,6 +114,41 @@ including for downloaded databases:
 make_mashID_db --annotate /path/to/db.msh --assembly-report assembly_data_report.jsonl
 ```
 
+## Organisms the database cannot separate
+
+Whether two organisms can be told apart is a property of the database, not of a sample: the same two
+references are the same distance apart in every run. Computing it once makes the per-sample
+annotation free, and correct whether or not winner-take-all is in use — unlike `--ambiguity-margin`,
+which cannot see a close relative under winner-take-all at all (see Outputs).
+
+```bash
+make_mashID_db --confusable /path/to/db.msh -t 16          # writes db.confusable.tsv
+make_mashID_db --confusable /path/to/db.msh --confusable-distance 0.002
+```
+
+For each reference the table records the closest reference of every *other* organism within
+`--confusable-distance` (default 0.005, matching `--ambiguity-margin`), nearest pair first:
+
+```
+Accession        Organism                 Confusable_Organism       Distance  Nearest_Accession
+GCA_025821985.1  Mycobacterium timonense  M. bouchedurhonense       0.000041  GCA_025822125.1
+```
+
+mashID picks the sidecar up automatically and notes affected calls; `--db-confusable` points at a
+different table. Names are compared as organisms, not as strings, so `Genus sp.` placeholders and the
+same epithet under two genera (*Mycobacterium*/*Mycobacteroides abscessus*) are not reported as
+conflicts.
+
+It is an all-pairs comparison, so cost grows with the square of the reference count: 3,534
+references of `mycobacteriaceae` take under two minutes and 850 MB and flag 945 references, but a
+database with hundreds of thousands of references is a different proposition. This is why it is a
+separate step rather than part of every build.
+
+Read the table top-down and it doubles as the sharpest mislabel detector available: a reference
+named for one species sitting a hair from another species' references is either a genuinely
+inseparable pair or a bad label. Both mislabelled `mycobacteriaceae` references were in the first 20
+of 2,102 rows, `GCA_025822535.1` at rank 4.
+
 ## Correcting a mislabelled reference
 
 Some assemblies are deposited under the wrong organism name, and a reference named for a species it

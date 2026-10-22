@@ -150,6 +150,47 @@ def screen(
     return parse_screen_output(result.stdout)
 
 
+def dist_pairs(
+    database: Path,
+    other: Path,
+    threads: int = 1,
+    max_distance: float | None = None,
+    exe: str = "mash",
+) -> Iterable[tuple[str, str, float]]:
+    """Yield ``(query_id_a, query_id_b, distance)`` from ``mash dist``, streamed line by line.
+
+    All-pairs output grows with the square of the database, so it is never held in memory;
+    ``max_distance`` is passed to Mash (``-d``) to discard distant pairs at the source.
+    """
+    cmd = [exe, "dist", "-p", str(max(1, threads))]
+    if max_distance is not None:
+        cmd += ["-d", str(max_distance)]
+    cmd += [str(database), str(other)]
+    log.debug("Running: %s", " ".join(cmd))
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            text=True, encoding="utf-8", errors="replace")
+    stderr_chunks: list[str] = []
+    reader = threading.Thread(target=lambda: stderr_chunks.append(proc.stderr.read()), daemon=True)
+    reader.start()
+    try:
+        for line in proc.stdout:
+            fields = line.rstrip("\n").split("\t")
+            if len(fields) < 3:
+                continue
+            try:
+                distance = float(fields[2])
+            except ValueError:            # a header or a malformed line
+                continue
+            yield fields[0], fields[1], distance
+    finally:
+        with contextlib.suppress(Exception):
+            proc.stdout.close()
+        returncode = proc.wait()
+        reader.join(timeout=5)
+        if returncode != 0:
+            raise _fail(cmd, returncode, "".join(stderr_chunks))
+
+
 def sketch(
     list_file: Path,
     output_prefix: Path,

@@ -80,6 +80,18 @@ MTBC members differ by well under 0.1% of their genome, and Mash identities amon
 fourth decimal. Which member comes first is decided by which reference happens to share one more hash;
 `Identification` will alternate between *M. tuberculosis* and *M. tuberculosis* variant *bovis* from
 sample to sample. Treat the result as "MTBC" and assign the variant or lineage with a SNP-based tool.
+
+Build the `<database>.confusable.tsv` sidecar (`make_mashID_db --confusable`) and mashID says so in
+the output instead of leaving it to be remembered:
+
+```
+Identity  Identification                             Note
+0.99989   Mycobacterium tuberculosis variant bovis   Not separable in this database from: Mycobacterium
+                                                     tuberculosis, Mycobacterium tuberculosis variant
+                                                     africanum, Mycobacterium mungi and 3 more
+```
+
+Do not read the runner-up's identity as the margin: under winner-take-all it is not one. See Outputs.
 The same applies to *Bacillus cereus* group members, *Escherichia coli* / *Shigella*, and other
 groups defined below the species level.
 

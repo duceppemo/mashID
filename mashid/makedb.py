@@ -10,7 +10,7 @@ import tempfile
 from collections import Counter
 from pathlib import Path
 
-from mashid import MashIDError, __version__
+from mashid import MashIDError, __version__, confusable
 from mashid.mash import find_mash, info_table, mash_version, sketch, sketch_count, sketch_header
 from mashid.metadata import (
     NA,
@@ -227,6 +227,23 @@ def annotate_database(database: Path, metadata: Path | None, assembly_report: Pa
     return write_sidecar(database, load_annotations(metadata, assembly_report), exe)
 
 
+def confusable_database(database: Path, metadata: Path | None, threads: int,
+                        max_distance: float) -> Path:
+    """Write the <db>.confusable.tsv sidecar: organisms this database cannot tell apart."""
+    exe = find_mash()
+    if not database.is_file():
+        raise MashIDError(f"Mash database not found: {database}")
+    entries = read_metadata(metadata) if metadata is not None else None
+    if entries is None:
+        path = sidecar_path(database)
+        if not path.is_file():
+            raise MashIDError(f"No metadata sidecar for {database}; write one first with "
+                              f"make_mashID_db --annotate, or pass --metadata")
+        entries = read_metadata(path)
+    neighbours = confusable.compute(database, entries, threads, max_distance, exe)
+    return confusable.write(confusable.confusable_path(database), neighbours, entries)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="make_mashID_db",
@@ -254,6 +271,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--check", metavar="DB.msh", type=Path, default=None,
                         help="Report quality issues of an existing database (short references, unparsed "
                              "names, missing TaxIDs, genus synonyms) and exit.")
+    parser.add_argument("--confusable", metavar="DB.msh", type=Path, default=None,
+                        help="Write the <db>.confusable.tsv sidecar for an existing database: every "
+                             "reference that another organism's references sit within "
+                             "--confusable-distance of, so mashID can note calls the database cannot "
+                             "separate. All-pairs, so it costs O(n^2) in references; no sketching.")
+    parser.add_argument("--confusable-distance", metavar=str(confusable.DEFAULT_MAX_DISTANCE),
+                        type=float, default=confusable.DEFAULT_MAX_DISTANCE,
+                        help="Mash distance below which two references of different organisms count as "
+                             "inseparable. Default: %(default)s")
     parser.add_argument("-t", "--threads", metavar="4", type=int, default=4,
                         help="Number of threads. Default: %(default)s")
     parser.add_argument("-s", "--sketch-size", metavar="10000", type=int, default=10000,
@@ -275,12 +301,16 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO,
                         format="%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
-    if args.annotate is None and args.check is None and (args.input is None or args.output is None):
-        parser.error("-i/--input and -o/--output are required (unless using --annotate or --check)")
+    if (args.annotate is None and args.check is None and args.confusable is None
+            and (args.input is None or args.output is None)):
+        parser.error("-i/--input and -o/--output are required (unless using --annotate, --check or "
+                     "--confusable)")
     threads = min(max(1, args.threads), os.cpu_count() or 1)
     try:
         if args.check is not None:
             check_database(args.check, max(0, args.min_length))
+        elif args.confusable is not None:
+            confusable_database(args.confusable, args.metadata, threads, args.confusable_distance)
         elif args.annotate is not None:
             annotate_database(args.annotate, args.metadata, args.assembly_report)
         else:

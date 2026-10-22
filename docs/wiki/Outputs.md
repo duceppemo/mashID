@@ -46,9 +46,23 @@ header-only file.
 | `Possible mixture with: X` | With winner-take-all (default), a different organism still scores ≥ 0.99 identity. A complete genome with ≥ 95% ANI to the top hit cannot do that once shared k-mers are credited to the winner, so X is supported by its own k-mers: expect contamination or a mixed culture. A "may be partial" hint marks references shorter than half the top hit's, whose k-mers can escape winner-take-all. |
 | `Ambiguous: X at identity …` | The best hit of a different organism is within `--ambiguity-margin` of the top hit. The database cannot separate them for this sample. |
 | `Low coverage: median multiplicity N` | Reads only: the top hit's k-mers were seen fewer than 5 times on average. Identification is plausible but weakly supported. |
+| `Not separable in this database from: X, Y` | References of another organism sit within `--confusable-distance` of the top hit's reference, so no sample can distinguish them. A property of the database, the same for every sample hitting that reference, from the `<database>.confusable.tsv` sidecar. |
 
 The mixture note is disabled with `--no-winner-take-all`, because without winner-take-all every
 related reference scores high.
+
+`Ambiguous` cannot catch a close relative under winner-take-all, which is why the last note exists.
+Winner-take-all credits each shared hash to the best reference only, so the runner-up reports the
+hashes *unique* to it rather than its similarity to the sample: two near-identical references
+produce a large apparent gap, not a near-tie. In one *M. bovis* run the real margin between the top
+two references was 11 hashes in 10,000, yet the runner-up's identity read 0.90 against the winner's
+0.9999 — twenty times `--ambiguity-margin` apart. The deflated value can even fall below
+`--identity` and drop out of the output altogether, leaving a single confident-looking hit. Compare
+runner-up identities only with `--no-winner-take-all`.
+
+The `Not separable` note states a fact about the database rather than about the sample, so it does
+not count towards `--fail-on note`. It is only reported when the sidecar exists; write it with
+`make_mashID_db --confusable` (see Databases).
 
 ## Ignored references
 

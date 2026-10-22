@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from mashid import MashIDError, __version__
+from mashid import confusable as confusable_mod
 from mashid.databases import REGISTRY, resolve_database
 from mashid.mash import ScreenHit, find_mash, info_table, mash_version, screen
 from mashid.metadata import (
@@ -66,6 +67,7 @@ class Settings:
     database: str | Path | None = None  # path, registry name, or None for the default database
     sample_sheet: Path | None = None
     db_metadata: Path | None = None     # override for the <db>.metadata.tsv sidecar
+    db_confusable: Path | None = None   # override for the <db>.confusable.tsv sidecar
     min_identity: float = 0.9
     max_p_value: float = 0.05
     n_hits: int = 10
@@ -158,7 +160,8 @@ def hit_row(rank: int, hit: ScreenHit, metadata: dict[str, DbEntry] | None) -> d
 
 
 def annotate(result: SampleResult, metadata: dict[str, DbEntry] | None, ambiguity_margin: float,
-             winner_take_all: bool = True) -> list[str]:
+             winner_take_all: bool = True,
+             confusable: dict[str, list[confusable_mod.Neighbour]] | None = None) -> list[str]:
     """Heuristic warnings for the summary: possible mixture, ambiguous call, low coverage.
 
     With winner-take-all (the default), hashes shared between references are credited to the best one,
@@ -166,6 +169,11 @@ def annotate(result: SampleResult, metadata: dict[str, DbEntry] | None, ambiguit
     is most likely present: "Possible mixture". A different organism below that threshold but within
     ``ambiguity_margin`` of the top hit is reported as "Ambiguous". Without winner-take-all, sister taxa
     all score high, so only the ambiguity check is meaningful.
+
+    The margin cannot catch a sister taxon under winner-take-all, however: the runner-up then reports
+    the hashes *unique* to it, which is not a similarity, and for near-identical references that number
+    is small whether or not the call was a near-tie. "Not separable in this database" covers that case
+    from ``confusable``, a property of the database computed once by ``make_mashID_db --confusable``.
     """
     notes: list[str] = []
     top = result.top
@@ -194,10 +202,17 @@ def annotate(result: SampleResult, metadata: dict[str, DbEntry] | None, ambiguit
         if labels:
             notes.append("Possible mixture with: " + ", ".join(sorted(labels)))
 
+    ambiguous: set[str] = set()
     if others:
         org, hit = others[0]
         if org not in mixture and top.identity_f - hit.identity_f <= ambiguity_margin:
+            ambiguous.add(org)
             notes.append(f"Ambiguous: {org} at identity {hit.identity}")
+
+    accession, _, _ = identify(top, metadata)
+    note = confusable_mod.note_for(accession, top_org, confusable, exclude=set(mixture) | ambiguous)
+    if note is not None:
+        notes.append(note)
 
     if result.sample.seq_type == "fastq" and top.multiplicity_f < LOW_COVERAGE_MULTIPLICITY:
         notes.append(f"Low coverage: median multiplicity {top.median_multiplicity}")
@@ -417,11 +432,16 @@ def write_json(path: Path, results: list[SampleResult], summary_rows: list[dict[
         fh.write("\n")
 
 
+def actionable_notes(notes: list[str]) -> list[str]:
+    """Notes that say something about the sample, i.e. everything bar database-wide statements."""
+    return [n for n in notes if not n.startswith(confusable_mod.NOTE_PREFIX)]
+
+
 def exit_code_for(results: list[SampleResult], fail_on: str) -> int:
     if fail_on == "no-hit":
         return 2 if any(r.top is None for r in results) else 0
     if fail_on == "note":
-        return 2 if any(r.top is None or r.notes for r in results) else 0
+        return 2 if any(r.top is None or actionable_notes(r.notes) for r in results) else 0
     return 0
 
 
@@ -433,6 +453,7 @@ def run(settings: Settings) -> int:
     database = resolve_database(settings.database)
     log.info("Database: %s", database)
     metadata = load_metadata(database, settings.db_metadata, exe)
+    confusable = confusable_mod.load(database, settings.db_confusable)
     settings.min_ref_length = effective_min_ref_length(settings.min_ref_length, metadata)
 
     extra_columns: list[str] = []
@@ -472,7 +493,8 @@ def run(settings: Settings) -> int:
                    for s in samples}
         for fut in as_completed(futures):
             result = fut.result()  # raises MashIDError on mash failure
-            result.notes = annotate(result, metadata, settings.ambiguity_margin, settings.winner_take_all)
+            result.notes = annotate(result, metadata, settings.ambiguity_margin,
+                                    settings.winner_take_all, confusable)
             results[result.sample.name] = result
             top = result.top
             summary = f"{identify(top, metadata)[1]} ({top.identity})" if top else NO_HIT

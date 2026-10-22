@@ -79,6 +79,37 @@ def test_annotate_ambiguous_mixture_low_coverage():
     assert annotate(_result([]), None, 0.005) == []
 
 
+def test_annotate_reports_inseparable_organisms_from_the_database():
+    from mashid.confusable import NOTE_PREFIX, Neighbour
+    from mashid.pipeline import annotate
+    top = _hit(0.999, 50, "A1", "NZ_1 Genusa one strain x")
+    sister = _hit(0.90, 50, "B1", "NZ_3 Genusb two strain z")  # crushed by winner-take-all
+    table = {"A1": [Neighbour("Genusb two", 0.001, "B1"), Neighbour("Genusd four", 0.004, "D1")]}
+
+    # the margin cannot see the sister taxon, but the database knows the two cannot be separated
+    assert annotate(_result([top, sister]), None, 0.005, True, None) == []
+    assert annotate(_result([top, sister]), None, 0.005, True, table) == \
+        [NOTE_PREFIX + "Genusb two, Genusd four"]
+    # a reference with no inseparable neighbour is not annotated
+    assert annotate(_result([top, sister]), None, 0.005, True, {"Z9": []}) == []
+    # an organism already named by the mixture check is not repeated
+    mixture = _hit(0.995, 50, "B1", "NZ_3 Genusb two strain z")
+    assert annotate(_result([top, mixture]), None, 0.005, True, table) == \
+        ["Possible mixture with: Genusb two", NOTE_PREFIX + "Genusd four"]
+
+
+def test_database_wide_note_does_not_trip_fail_on_note():
+    from mashid.confusable import NOTE_PREFIX
+    from mashid.pipeline import actionable_notes, exit_code_for
+    separable = _result([_hit(0.999, 50, "A1", "NZ_1 Genusa one")])
+    separable.notes = [NOTE_PREFIX + "Genusb two"]
+    assert actionable_notes(separable.notes) == []
+    assert exit_code_for([separable], "note") == 0
+    separable.notes.append("Low coverage: median multiplicity 2")
+    assert exit_code_for([separable], "note") == 2
+    assert exit_code_for([_result([])], "note") == 2        # no hit still fails
+
+
 def test_identify_prefers_metadata():
     from mashid.metadata import DbEntry
     from mashid.pipeline import identify
