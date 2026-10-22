@@ -11,6 +11,7 @@ from collections import Counter
 from pathlib import Path
 
 from mashid import MashIDError, __version__, confusable
+from mashid.fileutil import backup
 from mashid.mash import find_mash, info_table, mash_version, sketch, sketch_count, sketch_header
 from mashid.metadata import (
     NA,
@@ -74,6 +75,12 @@ def write_sidecar(database: Path, annotations: dict[str, tuple[str, str]], exe: 
     """Write <db>.metadata.tsv from the sketches in the database plus optional annotations."""
     entries, unannotated = entries_from_sketches(info_table(database, exe), annotations)
     path = sidecar_path(database)
+    if path.is_file():
+        # Without --metadata the names come from the sketch headers alone, so this replaces curated
+        # organism names and every TaxID with whatever the fasta headers said. Keep a copy: on a
+        # downloaded database that is the difference between a corrected label and the deposited one.
+        log.warning("Replacing the existing sidecar %s; a copy is kept at %s",
+                    path.name, backup(path).name)
     write_metadata(path, entries)
     if annotations and unannotated:
         log.warning("%d of %d reference(s) had no entry in the provided metadata; their names were parsed "

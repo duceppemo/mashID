@@ -1,5 +1,7 @@
 """Tests for database-level confusability: inseparable references of different organisms."""
 
+from pathlib import Path
+
 import pytest
 
 from mashid import MashIDError
@@ -219,6 +221,32 @@ def test_confusable_distance_must_be_a_mash_distance(tmp_path, distance):
     # cost minutes of all-pairs work first.
     with pytest.raises(MashIDError, match=r"must be a Mash distance in \(0, 1\]"):
         confusable_database(db, None, 1, distance)
+
+
+def test_annotate_keeps_a_copy_of_the_sidecar_it_replaces(tmp_path):
+    """--annotate without --metadata takes every name from the sketch headers, so on a downloaded
+    database it reverts the curated labels and drops every TaxID. It must not do that in place."""
+    import shutil
+
+    from mashid.makedb import annotate_database
+    from mashid.mash import find_mash
+    from mashid.metadata import read_metadata, sidecar_path
+    try:
+        find_mash()
+    except MashIDError:
+        pytest.skip("mash is not installed")
+    example = Path(__file__).resolve().parent.parent / "example" / "db"
+    db = tmp_path / "example.msh"
+    shutil.copy2(example / "example.msh", db)
+    sidecar = sidecar_path(db)
+    sidecar.write_text("Accession\tOrganism\tTaxID\nGCF_000000001.1\tCurated name\t1765\n")
+
+    annotate_database(db, None, None)
+    backups = list(tmp_path.glob("example.metadata.tsv.bak-*"))
+    assert len(backups) == 1
+    assert "Curated name" in backups[0].read_text()
+    assert "Curated name" not in sidecar.read_text()      # the rebuild did happen
+    assert read_metadata(sidecar)                          # and produced a usable sidecar
 
 
 @pytest.mark.parametrize("value", ["0", "2", "-1", "notanumber"])

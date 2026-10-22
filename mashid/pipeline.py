@@ -15,7 +15,7 @@ from pathlib import Path
 
 from mashid import MashIDError, __version__
 from mashid import confusable as confusable_mod
-from mashid.databases import REGISTRY, resolve_database
+from mashid.databases import REGISTRY, refresh_advice, resolve_database
 from mashid.fileutil import md5sum
 from mashid.mash import ScreenHit, find_mash, info_table, mash_version, screen
 from mashid.metadata import (
@@ -304,7 +304,7 @@ def load_metadata(database: Path, override: Path | None, exe: str) -> dict[str, 
         log.info("Loaded metadata for %d reference(s) from %s", len(entries), path)
         if path.stat().st_mtime < database.stat().st_mtime:
             log.warning("%s is older than the database; if the database was rebuilt, refresh it with "
-                        "make_mashID_db --annotate", path.name)
+                        "%s", path.name, refresh_advice(database, "--annotate"))
         return entries
     log.info("No metadata sidecar found; reading reference names and lengths from the database")
     built, _ = entries_from_sketches(info_table(database, exe))

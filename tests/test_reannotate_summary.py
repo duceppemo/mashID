@@ -63,7 +63,9 @@ def _results_dir(tmp_path, *, confusable=True, summary=SUMMARY, per_sample=PER_S
 
 def test_rebuild_picks_up_the_corrected_label_and_the_new_note(tmp_path):
     out, _ = _results_dir(tmp_path)
-    results, rows, columns, database, changed = script.rebuild(out)
+    rebuilt = script.rebuild(out)
+    results, rows, columns, changed = (rebuilt.results, rebuilt.rows,
+                                       rebuilt.columns, rebuilt.changed)
     assert len(rows) == 1 and changed == ["s1"]
     row = rows[0]
     assert row["Identification"] == "Genusa one"       # relabelled since the run
@@ -78,7 +80,7 @@ def test_rebuild_picks_up_the_corrected_label_and_the_new_note(tmp_path):
 
 def test_est_depth_is_recomputed_from_the_sidecar_length(tmp_path):
     out, _ = _results_dir(tmp_path)
-    _, rows, _, _, _ = script.rebuild(out)
+    rows = script.rebuild(out).rows
     assert rows[0]["Est_Depth"] == "0.1"               # 400000 bases / 4 Mb reference
 
 
@@ -98,15 +100,33 @@ def test_writes_all_three_summary_files_and_records_provenance(tmp_path):
 
 
 def test_backs_up_what_it_overwrites_without_clobbering(tmp_path):
-    out, _ = _results_dir(tmp_path)
+    out, db = _results_dir(tmp_path)
     before = (out / "summary_mashID.tsv").read_text()
     script.main([str(out)])
     backups = sorted(p.name for p in out.glob("summary_mashID.tsv.bak-*"))
     assert len(backups) == 1
     assert (out / backups[0]).read_text() == before
-    script.main([str(out)])                            # second run keeps the first backup
+    # Relabel again so the next run has something to do, and check it keeps the first backup.
+    write_sidecar(sidecar_path(db), [DbEntry("GCA_1.1", "Genusa three", "1765", 4_000_000, 10000),
+                                     DbEntry("GCA_2.1", "Genusa two", "222", 4_000_000, 10000)])
+    script.main([str(out)])
     assert len(list(out.glob("summary_mashID.tsv.bak-*"))) == 2
     assert (out / backups[0]).read_text() == before
+
+
+def test_a_run_already_up_to_date_is_left_alone(tmp_path, capsys):
+    """A second identical run used to stack up another set of backups and stamp the JSON with a
+    re-annotation that changed nothing."""
+    out, _ = _results_dir(tmp_path)
+    assert script.main([str(out)]) == 0
+    after = (out / "summary_mashID.tsv").read_text()
+    stamped = json.loads((out / "summary_mashID.json").read_text())["reannotated"]["at"]
+    capsys.readouterr()
+    assert script.main([str(out)]) == 0
+    assert "nothing written" in capsys.readouterr().out
+    assert (out / "summary_mashID.tsv").read_text() == after
+    assert len(list(out.glob("summary_mashID.tsv.bak-*"))) == 1
+    assert json.loads((out / "summary_mashID.json").read_text())["reannotated"]["at"] == stamped
 
 
 def test_no_backup_and_dry_run(tmp_path):
@@ -122,7 +142,7 @@ def test_no_backup_and_dry_run(tmp_path):
 
 def test_works_without_a_confusable_sidecar(tmp_path, capsys):
     out, _ = _results_dir(tmp_path, confusable=False)
-    _, rows, _, _, _ = script.rebuild(out)
+    rows = script.rebuild(out).rows
     assert rows[0]["Identification"] == "Genusa one"   # the relabel still lands
     assert rows[0]["Note"] == ""                       # but no database-wide note
     assert "make_mashID_db --confusable" in capsys.readouterr().err
@@ -136,8 +156,44 @@ def test_database_override(tmp_path):
     confusable_path(db).rename(confusable_path(moved))
     with pytest.raises(MashIDError, match="Database not found"):
         script.rebuild(out)
-    _, rows, _, used, _ = script.rebuild(out, moved)
+    rebuilt = script.rebuild(out, moved)
+    rows, used = rebuilt.rows, rebuilt.database
     assert used == moved and rows[0]["Identification"] == "Genusa one"
+
+
+def test_uses_the_sidecar_tables_the_run_was_made_with(tmp_path, capsys):
+    """A run made with --db-metadata was annotated from that table. Re-annotating it from the
+    sidecars beside the .msh would undo exactly what the override was for, and call it a change."""
+    out, db = _results_dir(tmp_path)
+    curated = tmp_path / "curated.metadata.tsv"
+    write_sidecar(curated, [DbEntry("GCA_1.1", "Genusa curated", "9999", 4_000_000, 10000),
+                            DbEntry("GCA_2.1", "Genusa two", "222", 4_000_000, 10000)])
+    _rewrite_run_json(out, parameters={"ambiguity_margin": 0.005, "winner_take_all": True,
+                                       "db_metadata": str(curated)})
+    rebuilt = script.rebuild(out)
+    assert rebuilt.metadata_table == curated
+    assert rebuilt.rows[0]["Identification"] == "Genusa curated"
+    assert rebuilt.rows[0]["TaxID"] == "9999"
+    assert "using the metadata table the run was made with" in capsys.readouterr().err
+    # --database is the way to say "re-annotate from this database's own sidecars instead"
+    assert script.rebuild(out, db).rows[0]["Identification"] == "Genusa one"
+
+
+def test_a_recorded_override_that_has_gone_missing_is_an_error(tmp_path):
+    out, _ = _results_dir(tmp_path)
+    _rewrite_run_json(out, parameters={"db_confusable": str(tmp_path / "gone.tsv")})
+    with pytest.raises(MashIDError, match="which no longer exists"):
+        script.rebuild(out)
+
+
+def test_the_json_records_which_tables_were_used_and_what_moved(tmp_path):
+    out, db = _results_dir(tmp_path)
+    assert script.main([str(out), "--no-backup"]) == 0
+    record = json.loads((out / "summary_mashID.json").read_text())["reannotated"]
+    assert record["samples_changed"] == ["s1"]
+    assert record["metadata_sidecar"]["path"] == str(sidecar_path(db))
+    assert record["confusable_sidecar"]["path"] == str(confusable_path(db))
+    assert "predates" not in record["reason"]          # it did not necessarily predate anything
 
 
 def test_rejects_a_directory_that_is_not_a_results_directory(tmp_path):
@@ -190,7 +246,7 @@ def test_warns_about_a_sample_the_summary_does_not_have(tmp_path, capsys):
     doc = json.loads((out / "mashID_run.json").read_text())
     doc["samples"].append({"name": "s2", "type": "fastq", "files": []})
     (out / "mashID_run.json").write_text(json.dumps(doc) + "\n")
-    _, rows, _, _, _ = script.rebuild(out)
+    rows = script.rebuild(out).rows
     assert [r["Sample"] for r in rows] == ["s1", "s2"]
     row = next(r for r in rows if r["Sample"] == "s2")
     assert row["Sequences"] == "NA" and row["Bases"] == "NA"
@@ -236,8 +292,8 @@ def test_a_column_the_old_summary_lacks_is_added_and_counted(tmp_path, capsys):
     header, row = SUMMARY.splitlines()
     no_note = "\t".join(header.split("\t")[:-1]) + "\n" + "\t".join(row.split("\t")[:-1]) + "\n"
     out, _ = _results_dir(tmp_path, summary=no_note)
-    _, rows, columns, _, changed = script.rebuild(out)
-    assert "Note" in columns and changed == ["s1"]
+    rebuilt = script.rebuild(out)
+    assert "Note" in rebuilt.columns and rebuilt.changed == ["s1"]
     assert script.main([str(out), "--no-backup"]) == 0
     written = (out / "summary_mashID.tsv").read_text().splitlines()
     assert written[0].split("\t")[-1] == "Note"
@@ -249,7 +305,8 @@ def test_a_column_the_old_summary_lacks_is_added_and_counted(tmp_path, capsys):
 def test_sample_sheet_columns_are_kept_but_mashid_columns_are_not_taken_from_the_old_file(tmp_path):
     out, _ = _results_dir(tmp_path, summary=SUMMARY.replace("\tNote\n", "\tNote\tExpected\n")
                                                  .replace("\tOld name\t\n", "\tOld name\t\tMbovis\n"))
-    _, rows, columns, _, _ = script.rebuild(out)
+    rebuilt = script.rebuild(out)
+    rows, columns = rebuilt.rows, rebuilt.columns
     assert columns[-1] == "Expected" and rows[0]["Expected"] == "Mbovis"
 
 

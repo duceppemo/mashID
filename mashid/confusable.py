@@ -184,8 +184,9 @@ def load(database: Path, override: Path | None) -> dict[str, list[Neighbour]] | 
     newer = max((p.stat().st_mtime for p in (Path(database), sidecar_path(database)) if p.is_file()),
                 default=0.0)
     if path.stat().st_mtime < newer:
+        from mashid.databases import refresh_advice  # local import: databases imports this module
         log.warning("%s is older than the database or its metadata sidecar; if either changed, "
-                    "refresh it with make_mashID_db --confusable", path.name)
+                    "refresh it with %s", path.name, refresh_advice(database, "--confusable"))
     return table
 
 
