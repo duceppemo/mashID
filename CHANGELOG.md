@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Fixed
+- Two references in the `mycobacteriaceae` database carried the organism name they were deposited
+  under at NCBI, which is wrong in both cases, so samples of those species were misidentified:
+  `GCA_013697125.1` ("Mycobacterium canetti") is *M. tuberculosis* variant *bovis* — it shares the
+  bovis-exclusive RD4 deletion and sits 0.001 from *M. bovis* against 0.004-0.018 for genuine
+  *M. canettii*; `GCA_025822535.1` ("Mycolicibacterium goodii") is *M. wolinskyi* at 99.06% ANI,
+  against 80.59% to the *M. goodii* type — no closer than the *M. smegmatis* outgroup. Both are
+  corrected in `curation/label_corrections.tsv`. Because Mash's winner-take-all strategy credits
+  each shared hash to one reference only, a wrongly named reference that wins by a few hashes also
+  pushes the correct ones far down the hit list, so the runner-up's identity understates how well
+  it matched.
+
 ### Changed
 - `--min-ref-length` defaults to `auto`: 100 kb unless most references of the database are shorter
   (viral or plasmid databases), then no filter. `make_mashID_db --check` recognises such databases.
@@ -13,6 +25,13 @@
   TaxIDs, s=2000, [Figshare](https://doi.org/10.6084/m9.figshare.34018548), with metadata sidecar.
 - `scripts/build_virus_db.sh` and `scripts/refseq_gbff_metadata.py`: a database of all RefSeq viral
   genomes from the RefSeq release files, with names and TaxIDs from the GenBank flat files.
+- `curation/label_corrections.tsv`: curated organism names for references that are mislabelled at
+  NCBI, with the deposited name and the evidence for each correction recorded alongside.
+- `scripts/bin_by_species.py --corrections`: override the organism NCBI reports before binning, so a
+  mislabelled genome is dereplicated against its true relatives instead of surviving as a
+  near-duplicate of the species it actually belongs to.
+- `scripts/apply_label_corrections.py`: apply curated corrections to a database that is already
+  built, rewriting the `.metadata.tsv` sidecar and `bins.tsv` in place without re-sketching.
 
 ## 0.2.8 (2026-09-23)
 

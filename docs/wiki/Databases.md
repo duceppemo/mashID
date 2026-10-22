@@ -77,7 +77,7 @@ assembly report (`--annotate --assembly-report`) or a curated `--metadata` table
 
 | Database | Built | Source and filters | Known issues |
 | --- | --- | --- | --- |
-| `mycobacteriaceae` | 2026-09-22 | `scripts/build_taxon_db.sh`: all 16,189 GenBank assemblies of taxon 1762 (atypical excluded) via NCBI Datasets, binned by species from the assembly report, dereplicated per species at Mash distance 0.001 with Assembly-dereplicator 0.3.2 (*M. tuberculosis*: 211 of 8722 kept), references < 100 kb excluded, sketched k=21, s=10000. 3534 references; names and TaxIDs from the assembly report, strain text removed. | `--check` reports one species under two genus spellings (`[Mycobacterium] chelonae`, NCBI's own naming). MTBC members are not separable (see Interpreting results). |
+| `mycobacteriaceae` | 2026-09-22 | `scripts/build_taxon_db.sh`: all 16,189 GenBank assemblies of taxon 1762 (atypical excluded) via NCBI Datasets, binned by species from the assembly report, dereplicated per species at Mash distance 0.001 with Assembly-dereplicator 0.3.2 (*M. tuberculosis*: 211 of 8722 kept), references < 100 kb excluded, sketched k=21, s=10000. 3534 references; names and TaxIDs from the assembly report, strain text removed. | `--check` reports one species under two genus spellings (`[Mycobacterium] chelonae`, NCBI's own naming). MTBC members are not separable (see Interpreting results). Two references are mislabelled at NCBI and are corrected in `curation/label_corrections.tsv`: `GCA_013697125.1` ("Mycobacterium canetti") is *M. tuberculosis* variant *bovis*, and `GCA_025822535.1` ("Mycolicibacterium goodii") is *M. wolinskyi*. Databases downloaded before this was found carry the deposited names; apply the corrections with `scripts/apply_label_corrections.py`. |
 | `mycobacteriaceae-2025` | 2025-02-20 | All NCBI assemblies of taxon 1762 from the datasets web table (26,101), renamed and binned by the species in the first header, dereplicated per species at Mash distance 0.001 with Assembly-dereplicator 0.3.2, sketched k=21, s=1000. 3309 references. | Seven references < 100 kb; names parsed from headers, so genus synonyms are not merged; no TaxIDs; s=1000 gives identities in steps of 0.001. Superseded by `mycobacteriaceae`. |
 | `listeria` | 2026-09-22 | `scripts/build_taxon_db.sh` with `ASSEMBLY_SOURCE=RefSeq` and taxon 1637: all 7453 RefSeq assemblies (atypical excluded; GenBank's 79,000 are mostly redundant *L. monocytogenes*), binned by species from the assembly report, dereplicated per species at Mash distance 0.001 (*L. monocytogenes*: 892 kept), references < 100 kb excluded, sketched k=21, s=10000. 1441 references with NCBI names and TaxIDs. | `--check` reports no issues. Validated on Nanopore *L. ivanovii* subsp. *londoniensis* and *L. monocytogenes* reads and an assembly. |
 | `listeria-2025` | 2025-02-18 | All NCBI *Listeria* assemblies, dereplicated as above. | Names parsed from headers; no TaxIDs. Superseded by `listeria`. |
@@ -112,6 +112,55 @@ including for downloaded databases:
 
 ```bash
 make_mashID_db --annotate /path/to/db.msh --assembly-report assembly_data_report.jsonl
+```
+
+## Correcting a mislabelled reference
+
+Some assemblies are deposited under the wrong organism name, and a reference named for a species it
+does not belong to misidentifies every sample of the species it really is. Because Mash's
+winner-take-all strategy credits each shared hash to a single reference, such a reference only has to
+win by a few hashes to take them all, which also pushes the correct references far down the hit list:
+a runner-up at a much lower identity is not evidence that it matched poorly.
+
+NCBI's own ANI check is where to start looking, but it does not settle the question on its own. The
+`average_nucleotide_identity` block of a NCBI Datasets assembly report carries `match_status`:
+
+- `species_match` — the best-matching type assembly is the declared species.
+- `below_threshold_match` — the best match *is* the declared species but below the species threshold,
+  usually a divergent or undescribed lineage rather than a mislabel.
+- `below_threshold_mismatch` — common and usually benign where species sit above 98% ANI or the
+  declared species has no type assembly, as across the *M. tuberculosis* complex.
+- `mismatch` — the best-matching type assembly is a *different* species. Worth investigating, though
+  most hits are genus reclassifications (*Mycobacterium* → *Mycolicibacterium*) or reciprocal synonym
+  pairs: of 3,534 references in `mycobacteriaceae`, 38 were flagged and 2 were real.
+
+Confirm before relabelling, with evidence that suits the group. ANI against the type strain of both
+candidate species decides it for most genera; within the *M. tuberculosis* complex, where ANI is
+uninformative, the regions of difference do (`GCA_013697125.1` was settled by the bovis-exclusive RD4
+deletion). Record the correction, the deposited name and the evidence in `curation/label_corrections.tsv`,
+then apply it.
+
+On an existing database, rewrite the sidecar and `bins.tsv` in place — no re-sketching, and
+`--dry-run` first:
+
+```bash
+scripts/apply_label_corrections.py curation/label_corrections.tsv \
+    ~/.local/share/mashID/db/<db>.metadata.tsv <build_dir>/bins.tsv
+```
+
+`Identification` and `TaxID` are then correct. `Description` comes from the reference's own fasta
+header by way of the sketch, so it keeps the deposited name until the database is rebuilt.
+
+On a rebuild, pass the same file to both steps. The binner needs it too: binning is what decides
+which genomes a reference is dereplicated against, and a mislabelled genome put in the wrong bin is
+compared only with the species it is named for, so it survives as a near-duplicate of the cluster it
+actually belongs to — which is how both `mycobacteriaceae` references got in.
+
+```bash
+scripts/bin_by_species.py assembly_data_report.jsonl ncbi_dataset/data binned/ \
+    --corrections curation/label_corrections.tsv
+make_mashID_db -i binned/ -o <db>.msh --assembly-report assembly_data_report.jsonl \
+    --metadata curation/label_corrections.tsv
 ```
 
 ## Choosing a sketch size
