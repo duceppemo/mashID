@@ -137,31 +137,59 @@ def test_existing_backup_is_never_clobbered(tmp_path):
     assert p.with_name(f"{p.name}.bak-{stamp}.2").is_file()
 
 
-def test_a_row_without_its_trailing_bin_field_does_not_crash(tmp_path):
-    """A hand-edited table, or one from a tool that omits trailing empties, used to raise
-    IndexError half-way through rewriting the file."""
+def test_a_ragged_row_is_filled_out_rather_than_skipped(tmp_path):
+    """It used to raise IndexError. Skipping such a row instead would report the correction as
+    unused and, where the row reached Organism but not TaxID, leave a new name on a stale TaxID."""
     p = tmp_path / "bins.tsv"
-    p.write_text("Accession\tOrganism\tTaxID\tBin\nGCA_1.1\tGenusa one\t111\n")
-    changed, _ = applier.apply_to(p, applier.read_corrections(_corrections(tmp_path)), False, False)
-    assert changed == 1
-    assert p.read_text().splitlines()[1].split("\t")[:3] == ["GCA_1.1", "Genusb two", "222"]
+    p.write_text("Accession\tOrganism\tTaxID\tBin\n"
+                 "GCA_1.1\tGenusa one\n"                 # short of TaxID and Bin
+                 "GCA_9.9\tGenusc nine\n")               # ragged and uncorrected: left alone
+    changed, matched = applier.apply_to(p, applier.read_corrections(_corrections(tmp_path)),
+                                        False, False)
+    assert changed == 1 and matched == {"GCA_1.1"}
+    rows = [ln.split("\t") for ln in p.read_text().splitlines()[1:]]
+    assert rows[0] == ["GCA_1.1", "Genusb two", "222", "Genusb_two"]
+    assert rows[1] == ["GCA_9.9", "Genusc nine"]
+
+
+def test_a_correction_matching_a_ragged_row_is_not_called_unused(tmp_path, capsys):
+    p = tmp_path / "db.metadata.tsv"
+    p.write_text(SIDECAR_HEADER + "GCA_1.1\tGenusa one\n")
+    applier.main([str(_corrections(tmp_path)), str(p), "--no-backup"])
+    assert "unused correction" not in capsys.readouterr().err
+
+
+def _serovar_bins(tmp_path, name):
+    p = tmp_path / name
+    p.write_text("Accession\tOrganism\tTaxID\tBin\n"
+                 "GCA_1.1\tSalmonella enterica subsp. enterica serovar Dublin\t28901"
+                 "\tSalmonella_enterica_subsp_enterica_serovar_Dublin\n")
+    return p
+
+
+def _serovar_correction(tmp_path):
+    p = tmp_path / "serovar_corrections.tsv"
+    p.write_text("Accession\tOrganism\n"
+                 "GCA_1.1\tSalmonella enterica subsp. enterica serovar Typhimurium\n")
+    return p
 
 
 def test_bin_is_recomputed_at_the_rank_the_bins_were_built_at(tmp_path):
-    """--rank species on a subspecies-binned table silently flattened the bin, and the Bin column
-    is what drives dereplication on the next rebuild."""
-    corrections = tmp_path / "corrections.tsv"
-    corrections.write_text("Accession\tOrganism\n"
-                           "GCA_1.1\tSalmonella enterica subsp. enterica serovar Typhimurium\n")
-    body = ("Accession\tOrganism\tTaxID\tBin\n"
-            "GCA_1.1\tSalmonella enterica subsp. enterica serovar Dublin\t28901"
-            "\tSalmonella_enterica_subsp_enterica_serovar_Dublin\n")
-    for rank, expected in (("species", "Salmonella_enterica"),
-                           ("serovar", "Salmonella_enterica_subsp_enterica_serovar_Typhimurium")):
-        p = tmp_path / f"bins_{rank}.tsv"
-        p.write_text(body)
-        applier.apply_to(p, applier.read_corrections(corrections), False, False, rank)
-        assert p.read_text().splitlines()[1].split("\t")[3] == expected
+    p = _serovar_bins(tmp_path, "bins.tsv")
+    applier.apply_to(p, applier.read_corrections(_serovar_correction(tmp_path)), False, False,
+                     "serovar")
+    assert p.read_text().splitlines()[1].split("\t")[3] == (
+        "Salmonella_enterica_subsp_enterica_serovar_Typhimurium")
+
+
+def test_the_wrong_rank_is_an_error_rather_than_a_flattened_bin(tmp_path):
+    """The old bin says which rank the table was binned at, so getting --rank wrong is detectable;
+    silently writing a species-level bin among serovar-level ones misdirects the next rebuild."""
+    p = _serovar_bins(tmp_path, "bins.tsv")
+    before = p.read_text()
+    with pytest.raises(SystemExit, match="Pass the --rank the table was binned at"):
+        applier.apply_to(p, applier.read_corrections(_serovar_correction(tmp_path)), False, False)
+    assert p.read_text() == before
 
 
 def test_a_confusable_table_has_both_organism_columns_corrected(tmp_path):

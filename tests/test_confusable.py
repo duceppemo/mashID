@@ -125,6 +125,14 @@ def test_note_keeps_an_mtbc_variant_against_the_bare_species():
         NOTE_PREFIX + "Mycobacterium tuberculosis")
 
 
+def test_note_reports_everything_when_the_call_itself_has_no_name():
+    """The filter needs a name to judge against. With none -- a reference the sidecar does not know
+    -- nothing can be ruled out, so the note must not silently vanish."""
+    table = {"GCA_1.1": [Neighbour("Mycobacterium avium", 0.001, "GCA_2.1")]}
+    for unnamed in ("NA", "unknown", "", "Mycobacterium sp."):
+        assert note_for("GCA_1.1", unnamed, table) == NOTE_PREFIX + "Mycobacterium avium"
+
+
 def test_note_is_none_when_nothing_to_say():
     table = {"GCA_1.1": [Neighbour("Genusa two", 0.001, "GCA_2.1")]}
     assert note_for("GCA_9.9", "Genusa one", table) is None       # reference not in the table
@@ -240,6 +248,15 @@ def test_annotate_and_confusable_run_together_in_that_order(monkeypatch, tmp_pat
     assert [c[0] for c in calls] == ["annotate", "confusable"]
     assert calls[0][1][1] == names          # --annotate uses the given names
     assert calls[1][1][1] is None           # --confusable then reads the sidecar they produced
+
+    # ... but only because both named the same database. For two different ones, --metadata still
+    # has to reach --confusable, which has no sidecar of its own to fall back on.
+    other = tmp_path / "other.msh"
+    other.write_bytes(b"x")
+    calls.clear()
+    assert makedb.main(["--annotate", str(db), "--confusable", str(other),
+                        "--metadata", str(names)]) == 0
+    assert calls[1][1][1] == names
 
 
 def test_confusable_warns_when_names_come_from_elsewhere(tmp_path, caplog, monkeypatch):

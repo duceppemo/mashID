@@ -180,7 +180,7 @@ def test_refuses_to_drop_a_row_the_run_no_longer_lists(tmp_path):
     (out / "summary_mashID.tsv").write_text(
         (out / "summary_mashID.tsv").read_text()
         + "s2\t1\t1\t0.9\t1/10000\t1\t0.1\t0\tGCA_2.1\t222\tGenusa two\t\n")
-    with pytest.raises(MashIDError, match=r"would drop 1 of them \(s2\)"):
+    with pytest.raises(MashIDError, match=r"would drop 1 of them \('s2'\)"):
         script.rebuild(out)
 
 
@@ -226,6 +226,37 @@ def test_rejects_a_sample_entry_without_a_name(tmp_path):
 def test_rejects_a_summary_without_a_sample_column(tmp_path):
     out, _ = _results_dir(tmp_path, summary="Foo\tBar\nx\ty\n")
     with pytest.raises(MashIDError, match="no Sample column"):
+        script.rebuild(out)
+
+
+def test_a_column_the_old_summary_lacks_is_added_and_counted(tmp_path, capsys):
+    """The headline use case: a run that predates make_mashID_db --confusable has no Note column.
+    Taking the column set from the old file dropped Note from the rewrite, and treating an absent
+    column as agreement reported the run as already up to date."""
+    header, row = SUMMARY.splitlines()
+    no_note = "\t".join(header.split("\t")[:-1]) + "\n" + "\t".join(row.split("\t")[:-1]) + "\n"
+    out, _ = _results_dir(tmp_path, summary=no_note)
+    _, rows, columns, _, changed = script.rebuild(out)
+    assert "Note" in columns and changed == ["s1"]
+    assert script.main([str(out), "--no-backup"]) == 0
+    written = (out / "summary_mashID.tsv").read_text().splitlines()
+    assert written[0].split("\t")[-1] == "Note"
+    assert written[1].endswith(NOTE_PREFIX + "Genusa two")
+    # and the two files that were rewritten together agree with each other
+    assert NOTE_PREFIX in (out / "summary_mashID_mqc.tsv").read_text()
+
+
+def test_sample_sheet_columns_are_kept_but_mashid_columns_are_not_taken_from_the_old_file(tmp_path):
+    out, _ = _results_dir(tmp_path, summary=SUMMARY.replace("\tNote\n", "\tNote\tExpected\n")
+                                                 .replace("\tOld name\t\n", "\tOld name\t\tMbovis\n"))
+    _, rows, columns, _, _ = script.rebuild(out)
+    assert columns[-1] == "Expected" and rows[0]["Expected"] == "Mbovis"
+
+
+def test_refuses_a_summary_with_two_rows_for_one_sample(tmp_path):
+    """Keyed by name, the second row silently won and the first vanished."""
+    out, _ = _results_dir(tmp_path, summary=SUMMARY + SUMMARY.splitlines()[1] + "\n")
+    with pytest.raises(MashIDError, match="more than one row for 's1'"):
         script.rebuild(out)
 
 

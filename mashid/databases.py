@@ -277,7 +277,16 @@ def _fetch(url: str, dest: Path, size: int, md5: str | None, verify: bool) -> No
 
 
 def _up_to_date(path: Path, md5: str | None, verify: bool) -> bool:
-    return path.is_file() and (not verify or md5 is None or md5sum(path) == md5)
+    if not path.is_file():
+        return False
+    if not verify or md5 is None:
+        return True
+    try:
+        return md5sum(path) == md5
+    except OSError as exc:
+        # Unreadable, so it cannot be shown to match; re-downloading is the recoverable answer.
+        log.warning("Could not read %s to check it (%s); treating it as out of date", path.name, exc)
+        return False
 
 
 def _sidecar_up_to_date(path: Path, md5: str | None) -> bool:
@@ -286,13 +295,22 @@ def _sidecar_up_to_date(path: Path, md5: str | None) -> bool:
     --no-verify is there to skip hashing a 284 MB sketch; a sidecar is a megabyte, and skipping it
     would leave a corrected label table beside the sketch it contradicts -- or, worse, install a new
     confusable table beside the deposited names it was computed to replace.
+
+    The download of a sidecar is verified for the same reason (see ``download``): a decision that
+    always hashes, paired with a fetch that does not, could never converge.
     """
     return _up_to_date(path, md5, verify=True)
 
 
 def download(name: str, directory: Path | None = None, force: bool = False, verify: bool = True) -> Path:
     """Download a registry database (and its sidecars, when published) to ``directory``
-    (default: db_dir()), verifying MD5 checksums. Existing, matching files are kept."""
+    (default: db_dir()), verifying MD5 checksums. Existing, matching files are kept.
+
+    A sidecar whose checksum differs from the registry's is replaced, so local edits to an installed
+    ``.metadata.tsv`` -- the curated label corrections, for instance -- do not survive a later
+    download of that database. Re-apply them, or keep the corrected copy elsewhere and point
+    ``--db-metadata`` at it.
+    """
     if name not in REGISTRY:
         raise MashIDError(f"Unknown database '{name}'. Available: {', '.join(REGISTRY)}")
     from mashid.confusable import confusable_path  # local imports: keep module load light
@@ -328,14 +346,17 @@ def download(name: str, directory: Path | None = None, force: bool = False, veri
     if need_db:
         _fetch(remote.url, dest, remote.size, remote.md5, verify)
         log.info("Installed %s -> %s", name, dest)
+    # The sidecars are fetched with verify=True whatever --no-verify says, to match the decision
+    # above. Hashing to decide a file is stale and then not hashing what replaces it would reinstall
+    # the same mismatching bytes on every run, for ever, and report success each time.
     if need_meta:
         assert remote.metadata_url is not None
-        _fetch(remote.metadata_url, sidecar, remote.metadata_size, remote.metadata_md5, verify)
+        _fetch(remote.metadata_url, sidecar, remote.metadata_size, remote.metadata_md5, verify=True)
         log.info("Installed metadata -> %s", sidecar)
     if need_confusable:
         assert remote.confusable_url is not None
         _fetch(remote.confusable_url, confusable, remote.confusable_size,
-               remote.confusable_md5, verify)
+               remote.confusable_md5, verify=True)
         log.info("Installed inseparable-organism pairs -> %s", confusable)
     ensure_sidecar(dest)
     return dest
