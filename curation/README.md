@@ -44,8 +44,8 @@ silently.
 
 ## Upstream status
 
-Every correction here has been reported to GenBank/RefSeq (`gb-admin@ncbi.nlm.nih.gov`, cc
-`genomes@ncbi.nlm.nih.gov`) with the evidence from its `Reason` column, so none needs filing again:
+Corrections are reported to GenBank/RefSeq (`gb-admin@ncbi.nlm.nih.gov`, cc
+`genomes@ncbi.nlm.nih.gov`) with the evidence from the `Reason` column. **Sent:**
 
 - **2026-10-22** — `GCA_013697125.1` and `GCA_025822535.1` (mycobacteriaceae).
 - **2026-10-22** — the 3 *Brucella* and 15 *Salmonella enterica* records from the sweep below, with
@@ -54,6 +54,14 @@ Every correction here has been reported to GenBank/RefSeq (`gb-admin@ncbi.nlm.ni
   contradicts the deposited serovar, which is a subsp. I serovar). The *Shigella* pair and
   `GCF_002266055.1` were explicitly listed as *not* reported, since only negative evidence exists
   for them.
+
+**Not yet sent** — the 14 records found after that report went out, all of them on the rebuilds of
+2026-10-22: 13 *Salmonella* (11 of the twelve `diarizonae serovar 38:[k]:-` records in the CFSAN
+2016-10-24 submission, and `GCF_026132465.1` and `GCF_026132575.1` from the Sichuan 2022-11-10
+submission) and `GCF_002290505.1` (*Shigella*). A follow-up organised by submission rather than by
+record, including the eleven same-submission controls that type exactly as deposited, is drafted and
+awaiting a send. Keep this list accurate: a row here is not evidence that anyone upstream has been
+told about it.
 
 NCBI maintains the ANI flag but not the records themselves, so the organism names change only if the
 submitting groups agree; a report is not a fix.
