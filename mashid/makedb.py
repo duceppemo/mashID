@@ -21,7 +21,7 @@ from mashid.metadata import (
     sidecar_path,
     write_metadata,
 )
-from mashid.names import binomial
+from mashid.names import binomial, with_paired_accessions
 from mashid.samples import FASTA_EXTENSIONS
 
 log = logging.getLogger("mashid.makedb")
@@ -66,7 +66,13 @@ def load_annotations(metadata: Path | None, assembly_report: Path | None) -> dic
         log.info("Loaded %d organism(s) from NCBI assembly report %s", len(annotations), assembly_report)
     if metadata is not None:
         table = read_metadata(metadata)
-        annotations.update({acc: (e.organism, e.taxid) for acc, e in table.items()})
+        # Pair GenBank/RefSeq accessions, as read_corrections does, because --metadata is how
+        # build_taxon_db.sh names the references it has just binned from the same curated file: a
+        # row written for GCA_x has to name GCF_x too, or the build bins a reference under its
+        # corrected species and then reports the deposited name, which the assembly report supplied
+        # for the other accession. Pairing after the update keeps an explicit row winning over a
+        # twin, and both winning over the report.
+        annotations.update(with_paired_accessions({acc: (e.organism, e.taxid) for acc, e in table.items()}))
         log.info("Loaded %d organism(s) from %s", len(table), metadata)
     return annotations
 

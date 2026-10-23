@@ -8,6 +8,9 @@ import re
 _SEQ_COUNT_PREFIX = re.compile(r"^\[\d+\s+seqs?\]\s*")
 _TRAILING_ELLIPSIS = re.compile(r"\s*\[\.\.\.\]\s*$")
 
+# Commas and semicolons both separate words in a fasta header, and both occur inside a designation.
+_SEPARATOR = re.compile(r"[,;]")
+
 # A genus is a capitalised Latin word, optionally in brackets (e.g. "[Clostridium]").
 _GENUS = re.compile(r"^\[?[A-Z][a-z]{2,}\]?$")
 # A species epithet is lowercase (possibly hyphenated) or an abbreviation such as "sp." / "spp.".
@@ -52,21 +55,26 @@ def _tokens(text: str) -> list[str]:
     # "serovar 16:z10:e,n,x,z15". Replacing every comma with a space truncated those at the first
     # comma, leaving "serovar 18:z4", which is not a valid formula.
     #
-    # The exception is a header that leaves out the space after a comma, as proGenomes 3 does in
+    # The exception is a header that leaves out the space after the comma, as proGenomes 3 does in
     # "Bradyrhizobium sp. ORS278,complete sequence": there the comma is an ordinary word break that
     # happens to look internal, and keeping the token whole appends "complete" to the strain
-    # designation. A formula never runs into one of the words that end a name anyway, so splitting
-    # on that and only that tells the two apart.
+    # designation. A name never runs into one of the words that end a name anyway, so the token is
+    # cut at the first separator followed by a stop word, and only there. It is cut rather than
+    # split on every separator, so that a formula keeps its own commas even in this shape:
+    # "serovar 1,4,[5],12:i:-,complete genome" gives "1,4,[5],12:i:-" and not "1".
     tokens: list[str] = []
     for raw in text.split():
         tok = raw.strip(",;")
         if not tok:
             continue
-        segments = tok.split(",")
-        if len(segments) > 1 and any(s.lower() in _STOP_WORDS for s in segments[1:]):
-            tokens.extend(s for s in segments if s)
-        else:
+        segments = _SEPARATOR.split(tok)
+        cut = next((i for i, s in enumerate(segments) if i and s.lower() in _STOP_WORDS), None)
+        if cut is None:
             tokens.append(tok)
+            continue
+        at = sum(len(s) for s in segments[:cut]) + cut - 1  # the separator before segments[cut]
+        tokens.append(tok[:at])
+        tokens.extend(s for s in _SEPARATOR.split(tok[at + 1:]) if s)
     return tokens
 
 

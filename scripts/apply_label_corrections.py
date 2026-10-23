@@ -19,28 +19,18 @@ from __future__ import annotations
 
 import argparse
 import sys
-from collections.abc import Iterable
 from pathlib import Path
 
 try:
     from mashid import MashIDError
     from mashid.fileutil import backup as make_backup
-    from mashid.names import BIN_RANKS, normalise_header, paired_accession, species_of
+    from mashid.names import BIN_RANKS, assemblies, normalise_header, species_of
     from mashid.names import read_corrections as _read_corrections
 except ImportError as exc:  # an installed mashid older than this script, or none at all
     sys.exit(f"error: this script needs the mashid package it ships with, but importing it failed "
              f"({exc}).\nInstall the matching version from the repository root: pip install -e .")
 
 NOTE = " [mashID: deposited as {old!r}; corrected to {new!r}, see curation/label_corrections.tsv]"
-
-
-def assemblies(accessions: Iterable[str]) -> set[str]:
-    """Collapse each GenBank/RefSeq pair to one assembly, so counts are of assemblies not keys.
-
-    ``read_corrections`` registers every row under both accessions of the assembly, which would
-    otherwise double the "n correction(s) loaded" count and let one unmatched row be reported twice.
-    """
-    return {min(a, paired_accession(a) or a) for a in accessions}
 
 
 def bin_of(organism: str, rank: str = "species") -> str:

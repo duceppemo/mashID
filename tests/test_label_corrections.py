@@ -282,3 +282,85 @@ def test_binner_uses_corrected_name(tmp_path, monkeypatch):
     assert bins["GCA_9.9"] == ["Genusa one", "111", "Genusa_one"]
     assert (out / "Genusb_two" / "GCA_1.1_genomic.fna").exists()
     assert (out / "Genusa_one" / "GCA_9.9_genomic.fna").exists()
+
+
+def test_the_metadata_build_path_pairs_accessions_like_the_corrections_reader(tmp_path):
+    """build_taxon_db.sh bins with --corrections and then names with --metadata, from one file.
+
+    Both readers have to agree about GenBank/RefSeq pairing. When only the binning side paired
+    them, a row written for GCA_1.1 binned GCF_1.1 under its corrected species and then let the
+    assembly report's deposited name into the sidecar, with nothing logged: the report registers
+    both accessions, so the reference did not count as unannotated either.
+    """
+    import json
+
+    from mashid.makedb import load_annotations
+    from mashid.metadata import entries_from_sketches
+
+    # Accessions have to be well formed here: the sidecar writer recovers one from the sketch path.
+    corrections = tmp_path / "corrections.tsv"
+    corrections.write_text("Accession\tOrganism\tTaxID\n"
+                           "GCA_000000001.1\tGenusb two\t222\n")
+    report = tmp_path / "assembly_data_report.jsonl"
+    report.write_text(json.dumps({
+        "accession": "GCF_000000001.1", "pairedAccession": "GCA_000000001.1",
+        "organism": {"organismName": "Genusa one", "taxId": 111},
+    }) + "\n")
+    annotations = load_annotations(corrections, report)  # the row is written for GCA_000000001.1
+    assert annotations["GCF_000000001.1"] == ("Genusb two", "222"), "the curated name must win for both"
+    assert annotations["GCA_000000001.1"] == ("Genusb two", "222")
+
+    from mashid.mash import SketchInfo
+    entries, unannotated = entries_from_sketches(
+        [SketchInfo(1000, 4_000_000, "/derep/Genusb_two/GCF_000000001.1_genomic.fna.gz",
+                    "NZ_1 Genusa one strain x")],
+        annotations)
+    assert (entries[0].organism, entries[0].taxid) == ("Genusb two", "222") and unannotated == 0
+
+
+def test_binner_counts_corrections_per_assembly_not_per_key(tmp_path, capsys, monkeypatch):
+    """A paired mapping holds two keys per assembly; counting keys announced twice as many
+    corrections as the file has and called every applied row's twin unmatched."""
+    import json
+
+    data = tmp_path / "data" / "GCF_1.1"
+    data.mkdir(parents=True)
+    (data / "GCF_1.1_genomic.fna").write_text(">x\nACGT\n")
+    report = tmp_path / "report.jsonl"
+    report.write_text(json.dumps({
+        "accession": "GCF_1.1", "organism": {"organismName": "Genusa one", "taxId": 111},
+        "assemblyInfo": {"assemblyLevel": "Complete Genome"},
+    }) + "\n")
+    monkeypatch.setattr("sys.argv", ["bin_by_species.py", str(report), str(tmp_path / "data"),
+                                     str(tmp_path / "out"), "--corrections", str(_corrections(tmp_path))])
+    assert binner.main() == 0
+    err = capsys.readouterr().err
+    assert "1 of 1 label correction(s) applied" in err
+    assert "match no accession" not in err
+
+
+def test_bins_table_appears_only_once_it_is_complete(tmp_path, monkeypatch):
+    """build_taxon_db.sh skips binning when bins.tsv exists, so a half-written one must not be
+    left behind under that name."""
+    import json
+
+    data = tmp_path / "data" / "GCF_1.1"
+    data.mkdir(parents=True)
+    (data / "GCF_1.1_genomic.fna").write_text(">x\nACGT\n")
+    report = tmp_path / "report.jsonl"
+    report.write_text(json.dumps({"accession": "GCF_1.1",
+                                  "organism": {"organismName": "Genusa one", "taxId": 111}}) + "\n")
+    out = tmp_path / "out"
+    real_replace = __import__("os").replace
+    seen = {}
+
+    def spy(src, dst):
+        seen["partial_existed"] = Path(src).is_file()
+        seen["final_existed_before"] = Path(dst).exists()
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(binner.os, "replace", spy)
+    monkeypatch.setattr("sys.argv", ["bin_by_species.py", str(report), str(tmp_path / "data"), str(out)])
+    assert binner.main() == 0
+    assert seen == {"partial_existed": True, "final_existed_before": False}
+    assert (out / "bins.tsv").is_file() and not (out / "bins.tsv.partial").exists()

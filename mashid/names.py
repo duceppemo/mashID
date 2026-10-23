@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import csv
 import re
+from collections.abc import Iterable
 from pathlib import Path
 
 from mashid import MashIDError
@@ -161,6 +162,31 @@ def paired_accession(accession: str) -> str | None:
     return None
 
 
+def with_paired_accessions(mapping: dict[str, tuple[str, str]]) -> dict[str, tuple[str, str]]:
+    """Register every entry under both accessions of its assembly, keeping explicit keys.
+
+    One assembly has a GenBank and a RefSeq accession, so a curated organism name given for either
+    holds for both, and one curation file can name references in a database built from either
+    source. Anything that reads a curated table has to agree about this: pairing in one reader and
+    not another gives a build that bins a reference as corrected and then names it as deposited.
+    """
+    out = dict(mapping)
+    for accession, value in mapping.items():
+        twin = paired_accession(accession)
+        if twin:
+            out.setdefault(twin, value)
+    return out
+
+
+def assemblies(accessions: Iterable[str]) -> set[str]:
+    """Collapse each GenBank/RefSeq pair to one assembly, for counting and reporting.
+
+    A paired mapping holds two keys per assembly, which would otherwise double a "corrections
+    loaded" count and report one unmatched row twice, once under each accession.
+    """
+    return {min(a, paired_accession(a) or a) for a in accessions}
+
+
 def read_corrections(path: Path) -> dict[str, tuple[str, str]]:
     """Read a TSV/CSV of curated labels into ``{accession: (organism, taxid)}``.
 
@@ -184,13 +210,8 @@ def read_corrections(path: Path) -> dict[str, tuple[str, str]]:
         acc = (row.get(acc_col) or "").strip()
         organism = (row.get(org_col) or "").strip()
         if acc and organism:
-            value = (organism, (row.get(tax_col) or "").strip() if tax_col else "")
-            out[acc] = value
-            # GCA_000195955.2 and GCF_000195955.2 are one assembly under its GenBank and its RefSeq
-            # accession, so a curated name for either holds for both, and one curation file can
-            # correct databases built from either source. The version is not varied: that would be a
-            # different assembly. An explicit row always wins over the twin it is registered under.
-            twin = paired_accession(acc)
-            if twin:
-                out.setdefault(twin, value)
-    return out
+            out[acc] = (organism, (row.get(tax_col) or "").strip() if tax_col else "")
+    # Every row also answers for the assembly's other accession; an explicit row always wins over
+    # the twin it is registered under. The version is never varied: that would be a different
+    # assembly.
+    return with_paired_accessions(out)

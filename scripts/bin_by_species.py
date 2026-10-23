@@ -30,7 +30,7 @@ from pathlib import Path
 
 try:
     from mashid import MashIDError
-    from mashid.names import BIN_RANKS, species_of
+    from mashid.names import BIN_RANKS, assemblies, species_of
     from mashid.names import read_corrections as _read_corrections
 except ImportError as exc:  # an installed mashid older than this script, or none at all
     sys.exit(f"error: this script needs the mashid package it ships with, but importing it failed "
@@ -97,7 +97,12 @@ def main() -> int:
         by_bin.setdefault(r[3], []).append(r)
     dropped = 0
     counts: Counter[str] = Counter()
-    with open(args.out_dir / "bins.tsv", "w") as table:
+    # Written through a temporary name and renamed at the end: build_taxon_db.sh treats
+    # bins.tsv as the marker that binning finished, and a run killed partway through used to leave
+    # a short one behind, which the next run skipped past and dereplicated as if it were complete.
+    bins_table = args.out_dir / "bins.tsv"
+    bins_partial = args.out_dir / "bins.tsv.partial"
+    with open(bins_partial, "w") as table:
         table.write("Accession\tOrganism\tTaxID\tBin\n")
         for bin_name, recs in by_bin.items():
             recs.sort(key=lambda r: (r[4], r[0]))  # best assembly level first, then accession
@@ -117,11 +122,15 @@ def main() -> int:
                         os.symlink(src.resolve(), dst)
                 counts[bin_name] += 1
                 table.write(f"{acc}\t{organism}\t{taxid}\t{bin_name}\n")
+    os.replace(bins_partial, bins_table)
     if dropped:
         print(f"{dropped} assemblies dropped by --max-bin {args.max_bin}", file=sys.stderr)
     if corrections:
-        print(f"{len(applied)} of {len(corrections)} label correction(s) applied", file=sys.stderr)
-        unused = sorted(set(corrections) - applied)
+        # Counted per assembly, not per key: a correction is registered under both the GenBank and
+        # the RefSeq accession of its assembly, so counting keys doubles the total and reports an
+        # applied row's twin as unmatched.
+        print(f"{len(applied)} of {len(assemblies(corrections))} label correction(s) applied", file=sys.stderr)
+        unused = sorted(assemblies(corrections) - assemblies(applied))
         if unused:
             # One curation file covers every database, so most of its rows belong to other taxa.
             # Say so once rather than once per row, or a build logs a screenful of harmless lines.

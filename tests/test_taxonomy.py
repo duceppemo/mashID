@@ -36,6 +36,12 @@ from mashid.taxonomy import clean_comment, organism_from_comment
         ("114615.SAMEA3138227.CU234118 Bradyrhizobium sp. ORS278,complete sequence",
          "Bradyrhizobium sp. ORS278"),
         ("NZ_X.1 Mycobacterium mantenii strain E2660 chromosome,complete genome", "Mycobacterium mantenii"),
+        # a space-less comma is cut at the stop word, so a formula before it keeps its own commas
+        ("NZ_X.1 Salmonella enterica subsp. enterica serovar 1,4,[5],12:i:-,complete genome",
+         "Salmonella enterica subsp. enterica serovar 1,4,[5],12:i:-"),
+        # semicolons separate words in a header exactly as commas do
+        ("114615.SAMEA3138227.CU234118 Bradyrhizobium sp. ORS278;complete sequence",
+         "Bradyrhizobium sp. ORS278"),
     ],
 )
 def test_organism_from_comment(comment, expected):
