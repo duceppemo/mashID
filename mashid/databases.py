@@ -181,10 +181,14 @@ REGISTRY: dict[str, RemoteDatabase] = {
             description="proGenomes 4 representative genomes: 32,887 species-cluster representatives across "
                         "4384 genera of bacteria and archaea, current NCBI names and TaxIDs. k=21, s=2000. "
                         "For species-level screening of anything.",
-            doi="10.6084/m9.figshare.33968806.v1",
-            metadata_url="https://ndownloader.figshare.com/files/69242065",
-            metadata_md5="34dd58c71e6f0fcf0f939a29fb780785",
-            metadata_size=8_104_932,
+            doi="10.6084/m9.figshare.33968806.v2",
+            # v2 is a sidecar-only update: two Salmonella references regained the serovar formula
+            # that was being truncated at its first comma, and Source_File now names the proGenomes
+            # archive the references came from rather than the split directory the build deleted.
+            # The sketch is unchanged and keeps its original URL.
+            metadata_url="https://ndownloader.figshare.com/files/70525026",
+            metadata_md5="d83eb894f4b896b25cdfbed1bd38b6a3",
+            metadata_size=8_269_377,
         ),
         RemoteDatabase(
             name="progenomes3",
