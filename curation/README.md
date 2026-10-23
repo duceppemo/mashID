@@ -128,9 +128,8 @@ Corrections are reported to GenBank/RefSeq (`gb-admin@ncbi.nlm.nih.gov`, cc
   the MLST-9 profiles and the SISTR table, plus the note that `match_status` already separates them
   and that nine of the *Salmonella* records are internally inconsistent (the deposited subspecies
   contradicts the deposited serovar, which is a subsp. I serovar). The *Shigella* pair and
-  `GCF_002266055.1` were explicitly listed as *not* reported, since only negative evidence exists
-  for them.
-
+  `GCF_002266055.1` were explicitly listed as *not* reported, since only negative evidence existed
+  for them at the time.
 - **2026-10-23** — the 15 records found after that report went out, all of them on the rebuilds of
   2026-10-22: 14 *Salmonella* (11 of the twelve `diarizonae serovar 38:[k]:-` records in the CFSAN
   2016-10-24 submission, `GCF_026132465.1` and `GCF_026132575.1` from the Sichuan 2022-11-10
@@ -139,28 +138,30 @@ Corrections are reported to GenBank/RefSeq (`gb-admin@ncbi.nlm.nih.gov`, cc
   unit the errors occur in, and including the eleven same-submission controls that type exactly as
   deposited — evidence that the discrepancy is not an artefact of our method or of one submitter's
   workflow.
+- **2026-10-23** — `GCF_002290495.1`, with a correction to the message above, which had described
+  it as one "we reported to you separately". It was not: the 2026-10-22 report deliberately set the
+  whole *Shigella* pair aside, because the only evidence then was ST58's absence from the
+  *S. flexneri* we had typed, which is not evidence of anything. A search of the sent mail found no
+  other message naming it, so that sentence was simply wrong, and it had gone to GenBank over our
+  name. Sent as
+  [`reports/2026-10-23_ncbi_shigella_correction.txt`](reports/2026-10-23_ncbi_shigella_correction.txt),
+  which says so plainly and then reports the record properly.
 
-That accounts for 35 of the 36 rows: 2 mycobacteriaceae, 3 *Brucella* and 15 *Salmonella* in the
-first report, 14 *Salmonella* and `GCF_002290505.1` in the second.
+  The evidence had by then turned positive, which is why it was reportable at all: ST58 is attested
+  among deposited *S. sonnei* — `GCF_002248345.1`, from the same submitter a month earlier, carries
+  all seven ST58 alleles — so the argument no longer rested on the ST being missing from
+  *S. flexneri*. `GCF_002290495.1` sits 0.000074 from the deposited *S. sonnei* `GCF_002248355.1`,
+  also ST58, against 0.005480 from its nearest *S. flexneri*.
 
-**Not yet sent — `GCF_002290495.1`, plus a correction we owe.** The 2026-10-23 report describes
-this accession as one "we reported to you separately". It was not: the 2026-10-22 report
-deliberately set the whole *Shigella* pair aside, because the only evidence then was ST58's absence
-from the *S. flexneri* we had typed, which is not evidence of anything. A search of the sent mail
-found no other message naming it, so that sentence is simply wrong, and it went to GenBank over our
-name. The draft at
-[`reports/DRAFT_ncbi_shigella_correction.txt`](reports/DRAFT_ncbi_shigella_correction.txt) says so
-plainly and reports the record properly.
+**All 36 rows have now been reported, and nothing is awaiting a send**: 2 mycobacteriaceae, then 3
+*Brucella* with 15 *Salmonella*, on 2026-10-22; 14 *Salmonella* and `GCF_002290505.1` on 2026-10-23;
+`GCF_002290495.1` in the correction that followed. `GCF_002266055.1`, named in the first report as
+examined but not reported, has no row here: it never met the evidence bar in
+[When to add a row](#when-to-add-a-row).
 
-The evidence has since turned positive, which is why this is now reportable at all: ST58 is
-attested among deposited *S. sonnei* — `GCF_002248345.1`, from the same submitter a month earlier,
-carries all seven ST58 alleles — so the argument no longer rests on the ST being missing from
-*S. flexneri*. `GCF_002290495.1` sits 0.000074 from the deposited *S. sonnei* `GCF_002248355.1`,
-also ST58, against 0.005480 from its nearest *S. flexneri*.
-
-The lesson for this file is about the cross-reference, not the biology: a claim about *what we have
-already told NCBI* is as checkable as a claim about a genome, and it was the only kind here that
-nobody checked before it was sent.
+The lesson from the third report is about the cross-reference, not the biology: a claim about *what
+we have already told NCBI* is as checkable as a claim about a genome, and it was the only kind here
+that nobody checked before it was sent.
 
 Keep this section honest: a row in `label_corrections.tsv` is not evidence that anyone upstream has
 been told about it, so a new row means this section is out of date until it names that row's report.

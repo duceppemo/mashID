@@ -1,5 +1,6 @@
-# DRAFT, NOT SENT. A correction to the report of 2026-10-23 plus the one record of the 36 that has
-# never been reported in its own right. The sender's contact address is omitted from this copy.
+# Sent to GenBank/RefSeq on 2026-10-23: a correction to the earlier report of the same day, plus
+# the one record of the 36 that had never been reported in its own right. Verbatim as sent, except
+# that the sender's contact address is omitted from this copy.
 
 To:  gb-admin@ncbi.nlm.nih.gov
 Cc:  genomes@ncbi.nlm.nih.gov

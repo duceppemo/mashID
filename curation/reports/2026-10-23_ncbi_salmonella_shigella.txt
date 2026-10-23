@@ -1,7 +1,8 @@
 # The organism-assignment report sent to GenBank/RefSeq on 2026-10-23, kept for the record.
 # Verbatim as sent, except that the sender's contact address is omitted here.
 # KNOWN ERROR IN THE TEXT BELOW: section 4 calls GCF_002290495.1 one "we reported to you
-# separately". It had not been reported. See reports/DRAFT_ncbi_shigella_correction.txt.
+# separately". It had not been reported. Corrected in a second message the same day:
+# reports/2026-10-23_ncbi_shigella_correction.txt.
 
 To:  gb-admin@ncbi.nlm.nih.gov
 Cc:  genomes@ncbi.nlm.nih.gov
