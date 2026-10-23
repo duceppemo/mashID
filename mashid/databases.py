@@ -51,22 +51,23 @@ REGISTRY: dict[str, RemoteDatabase] = {
     for db in (
         RemoteDatabase(
             name="mycobacteriaceae",
-            filename="mycobacteriaceae_2026-09-22.msh",
-            url="https://ndownloader.figshare.com/files/69229306",
-            md5="cc73df8b8b5f7257849c6039430f2a43",
-            size=283_977_000,
-            description="Mycobacteriaceae (NCBI taxon 1762): 16,189 GenBank assemblies as of 2026-09-22, "
-                        "dereplicated per species at 99.9% identity to 3534 references, with NCBI TaxIDs. "
+            filename="mycobacteriaceae_2026-10-22.msh",
+            url="https://ndownloader.figshare.com/files/70524381",
+            md5="a26156de99e6ee2f868a27d097fef702",
+            size=299_559_160,
+            description="Mycobacteriaceae (NCBI taxon 1762): 16,433 GenBank assemblies as of 2026-10-22, "
+                        "dereplicated per species at 99.9% identity to 3728 references, with NCBI TaxIDs. "
                         "k=21, s=10000.",
-            doi="10.6084/m9.figshare.33965176.v2",
-            # v2 corrects two mislabelled references (see curation/label_corrections.tsv) and adds
-            # the confusable table. The sketch is unchanged, so only the sidecars were re-uploaded.
-            metadata_url="https://ndownloader.figshare.com/files/70479336",
-            metadata_md5="980068b88ed8f23c820f55dc442694c7",
-            metadata_size=1_067_504,
-            confusable_url="https://ndownloader.figshare.com/files/70479333",
-            confusable_md5="8a41d9e4e32407722eaf6f0ae75a9c56",
-            confusable_size=210_380,
+            doi="10.6084/m9.figshare.33965176.v3",
+            # v3 is a rebuild with the curated label corrections applied before binning, so the two
+            # mislabelled references v2 renamed are gone: binned with their true relatives they were
+            # near-duplicates and dereplication dropped them.
+            metadata_url="https://ndownloader.figshare.com/files/70524378",
+            metadata_md5="7f49515304fcf8afe77bc4a080109c75",
+            metadata_size=1_114_036,
+            confusable_url="https://ndownloader.figshare.com/files/70524375",
+            confusable_md5="64b31294b3f7b9c6c9ef3a05a62b6b33",
+            confusable_size=129_266,
         ),
         RemoteDatabase(
             name="mycobacteriaceae-2025",
@@ -104,48 +105,58 @@ REGISTRY: dict[str, RemoteDatabase] = {
         ),
         RemoteDatabase(
             name="salmonella",
-            filename="salmonella_2026-09-22.msh",
-            url="https://ndownloader.figshare.com/files/69243427",
-            md5="96fa827bad8e68a92713ead5019a3783",
-            size=115_862_040,
-            description="Salmonella (NCBI taxon 590): 21,133 RefSeq assemblies as of 2026-09-22, binned by "
-                        "subspecies, dereplicated to 1442 references covering S. bongori and all six S. enterica "
-                        "subspecies, with NCBI TaxIDs. k=21, s=10000. Species/subspecies level; serovars in names "
-                        "are those of the nearest reference, not a serotype call.",
-            doi="10.6084/m9.figshare.33968917.v1",
-            metadata_url="https://ndownloader.figshare.com/files/69243424",
-            metadata_md5="dae3aa4d47280cb7dbc7a7ca9b6ca81f",
-            metadata_size=433_228,
+            filename="salmonella_2026-10-22.msh",
+            url="https://ndownloader.figshare.com/files/70524918",
+            md5="98576e2fac7f26333c7af6b25cef5b90",
+            size=115_370_968,
+            description="Salmonella (NCBI taxon 590): 21,543 RefSeq assemblies as of 2026-10-22, binned by "
+                        "subspecies, dereplicated to 1436 references covering S. bongori and all six S. enterica "
+                        "subspecies, with NCBI TaxIDs. k=21, s=10000. 29 mislabelled references were corrected "
+                        "before binning. Species/subspecies level; serovars in names are those of the nearest "
+                        "reference, not a serotype call.",
+            doi="10.6084/m9.figshare.33968917.v2",
+            metadata_url="https://ndownloader.figshare.com/files/70524915",
+            metadata_md5="c1872d8a0be34c604f6ad1ec298bda32",
+            metadata_size=425_546,
+            confusable_url="https://ndownloader.figshare.com/files/70524912",
+            confusable_md5="0b4e8427628a87e3e7ffbd2a7f3ec4b6",
+            confusable_size=116_911,
         ),
         RemoteDatabase(
             name="brucella",
-            filename="brucella_2026-09-22.msh",
-            url="https://ndownloader.figshare.com/files/69249067",
-            md5="bf3336e18cf0418a3490b60a1b0d9483",
-            size=31_086_528,
-            description="Brucella (NCBI taxon 234, including former Ochrobactrum): 1995 GenBank assemblies as of "
-                        "2026-09-22, dereplicated at 99.97% identity to 387 references (29 species) with NCBI "
-                        "TaxIDs. k=21, s=10000. Classical species are nearest-reference calls; biovars not "
-                        "resolved.",
-            doi="10.6084/m9.figshare.33970168.v1",
-            metadata_url="https://ndownloader.figshare.com/files/69249064",
-            metadata_md5="11462ffa6f915117629687b25e07c199",
-            metadata_size=102_308,
+            filename="brucella_2026-10-22.msh",
+            url="https://ndownloader.figshare.com/files/70524939",
+            md5="64a85eb2a226e55f95bc71f57aa071bd",
+            size=31_728_432,
+            description="Brucella (NCBI taxon 234, including former Ochrobactrum): 2022 GenBank assemblies as of "
+                        "2026-10-22, dereplicated at 99.97% identity to 395 references (29 species) with NCBI "
+                        "TaxIDs. k=21, s=10000. 3 mislabelled references were corrected before binning. "
+                        "Classical species are nearest-reference calls; biovars not resolved.",
+            doi="10.6084/m9.figshare.33970168.v2",
+            metadata_url="https://ndownloader.figshare.com/files/70524936",
+            metadata_md5="c8759d5b7c31b30dac1dcee8bc0cc686",
+            metadata_size=103_110,
+            confusable_url="https://ndownloader.figshare.com/files/70524933",
+            confusable_md5="e7b72a4060a8ced167dc5a1d81eb150d",
+            confusable_size=137_285,
         ),
         RemoteDatabase(
             name="escherichia",
-            filename="escherichia_shigella_2026-09-22.msh",
-            url="https://ndownloader.figshare.com/files/69247507",
-            md5="0a8a7b18f9dec77ce8578116d115d18b",
-            size=361_633_792,
-            description="Escherichia and Shigella (NCBI taxa 561, 620): 57,146 RefSeq assemblies as of "
-                        "2026-09-22, dereplicated to 4503 references (E. coli 3316) with NCBI TaxIDs. k=21, "
-                        "s=10000. Species level; Shigella species other than sonnei/flexneri are not reliably "
-                        "separable.",
-            doi="10.6084/m9.figshare.33969760.v1",
-            metadata_url="https://ndownloader.figshare.com/files/69247504",
-            metadata_md5="9945ee3f12cf01162391a5f8ff6b6db5",
-            metadata_size=1_111_407,
+            filename="escherichia_shigella_2026-10-22.msh",
+            url="https://ndownloader.figshare.com/files/70524879",
+            md5="15c8890547a6171350095fb2af02c31a",
+            size=362_190_880,
+            description="Escherichia and Shigella (NCBI taxa 561, 620): 58,198 RefSeq assemblies as of "
+                        "2026-10-22, dereplicated to 4510 references with NCBI TaxIDs. k=21, s=10000. Two "
+                        "mislabelled Shigella references were corrected before binning. Species level; Shigella "
+                        "species other than sonnei/flexneri are not reliably separable.",
+            doi="10.6084/m9.figshare.33969760.v2",
+            metadata_url="https://ndownloader.figshare.com/files/70524876",
+            metadata_md5="a88cd194435a742f1b6055bcd043cfbf",
+            metadata_size=1_095_360,
+            confusable_url="https://ndownloader.figshare.com/files/70524873",
+            confusable_md5="8273957a447c83bd67d6dc74cf1fc968",
+            confusable_size=174_956,
         ),
         RemoteDatabase(
             name="refseq_viral",
@@ -190,8 +201,17 @@ REGISTRY: dict[str, RemoteDatabase] = {
             url="https://ndownloader.figshare.com/files/39690568",
             md5="3d70107aefb96d76396049b1a9298290",
             size=684_479_872,
-            description="RefSeq bacteria as of 2023-01-19, dereplicated at 99% identity.",
-            doi="10.6084/m9.figshare.22312240.v2",
+            description="RefSeq bacteria as of 2023-01-19, dereplicated at 99% identity: 82,557 references "
+                        "across 32,750 organisms, with current NCBI names and TaxIDs for 82,547 of them. "
+                        "k=21, s=1000. Three years old; prefer 'progenomes4' for current names at species level.",
+            doi="10.6084/m9.figshare.22312240.v3",
+            # The sketch is from 2023 and unchanged. v3 adds the metadata sidecar it never had, so its
+            # names and TaxIDs now come from NCBI rather than from each reference's fasta header, and
+            # the curated label corrections reach it. The ten references withdrawn from RefSeq since
+            # 2023 keep their header names and have no TaxID.
+            metadata_url="https://ndownloader.figshare.com/files/70524954",
+            metadata_md5="a6e545c7942a645fb2841d06cc3baab5",
+            metadata_size=19_351_078,
         ),
     )
 }
