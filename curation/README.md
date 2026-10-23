@@ -163,8 +163,10 @@ rebuild: `GCA_000250775.2`, `GCA_000250835.2`, `GCA_000292125.1`, `GCA_009823695
 `GCA_016091955.1`, `GCA_016091965.1`, `GCA_018604785.1`, `GCA_041861985.1`, `GCA_055389085.1` and
 `GCA_000662015.2`. Four of them NCBI already flags `mismatch`; the rest pass its ANI check, which
 for *Brucella* means little, since every member sits within about 97% ANI of every other and a
-declared species clears the 95% threshold without being the closest. A report for these is still to
-be drafted.
+declared species clears the 95% threshold without being the closest. The report is drafted at
+[`reports/DRAFT_ncbi_brucella.txt`](reports/DRAFT_ncbi_brucella.txt), grouped by what the deposited
+name gets wrong, and it says of `GCA_000662015.2` only what we could verify ourselves — a classical
+*Brucella*, not *B. inopinata* — attributing the *canis* call to the paper.
 
 The lesson from the third report is about the cross-reference, not the biology: a claim about *what
 we have already told NCBI* is as checkable as a claim about a genome, and it was the only kind here

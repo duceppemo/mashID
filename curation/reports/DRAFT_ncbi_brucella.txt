@@ -1,0 +1,122 @@
+# DRAFT, NOT SENT. The ten Brucella records added to curation/label_corrections.tsv on 2026-10-23.
+# The sender's contact address is omitted from this copy.
+
+To:  gb-admin@ncbi.nlm.nih.gov
+Cc:  genomes@ncbi.nlm.nih.gov
+Subject: Organism assignment: 10 Brucella assemblies
+
+Dear GenBank/RefSeq staff,
+
+This follows our reports of 2026-10-22 and 2026-10-23 on Brucella, Salmonella and Shigella
+assemblies. Rebuilding our mashID Brucella reference database with those corrections applied
+surfaced ten further assemblies whose organism name is not supported by their sequence. As before we
+are reporting them for review with the submitters and are not requesting a taxonomy change.
+
+Why these ten and not others: the classical Brucella species are a single genomospecies, 0.2 to
+0.5% apart, so two assemblies carrying different species names and sitting 0.00004 to 0.0002 apart
+(Mash, k=21, s=10000) cannot both be correctly named. Each such pair in our database was then put to
+two independent tests that do not depend on distance:
+
+  - the species-specific multiplex real-time PCR of Hoover E., Chmara J., Duceppe M., Charron P.,
+    Lloyd D., Huang H., Surujballi O., Thanthrige-Don N., Arnold K., Hazelwood J. and Kang M.
+    (2026), Microbiol Spectr 14:e02974-25, scored in silico: an assay counts as held only when all
+    three of its oligos occur full length and mismatch free, the primers face each other, the probe
+    lies between them and the amplicon is the published length;
+  - MLST-9 (PubMLST brucella scheme, mlst 2.33.1) run over all 460 genomes of our dereplicated
+    reference set, so that an ST is read against the distribution of deposited names that carry it
+    rather than against a handful of controls.
+
+In every case below the two agree, and where an ST is informative the dissenting name is the
+assembly the assay contradicts.
+
+
+1. FOUR ASSEMBLIES DEPOSITED AS B. ABORTUS THAT TYPE AS B. MELITENSIS
+
+NCBI's ANI check already flags all four as mismatch, so these may be known to you.
+
+    accession        deposited          MLST-9   assay held      our reading
+    GCA_041861985.1  Brucella abortus   ST8      B. melitensis   B. melitensis
+    GCA_016091955.1  Brucella abortus   ST8      B. melitensis   B. melitensis
+    GCA_016091965.1  Brucella abortus   ST8      B. melitensis   B. melitensis
+    GCA_018604785.1  Brucella abortus   ST8      B. melitensis   B. melitensis
+
+Across our 460 typed references ST8 is carried by 10 deposited B. melitensis and 1 deposited
+B. abortus, that one being GCA_041861985.1. GCA_041861985.1 shares all nine MLST alleles with
+GCA_003516085.1, a deposited B. melitensis 0.000096 away, and the B. abortus assay is absent from
+all four assemblies.
+
+
+2. THREE ASSEMBLIES WHOSE DEPOSITED NAME IS CONTRADICTED BY BOTH TESTS
+
+    GCA_000250775.2  "Brucella melitensis S66"   ->  B. suis
+        MLST-9 ST14 with all nine alleles identical to the deposited B. suis GCA_055657665.1,
+        GCA_000331635.1 and GCA_000292105.2. ST14 across our references is suis 5 to melitensis 1,
+        the melitensis being this assembly. The B. suis assay is held in full, the B. melitensis
+        assay absent. Mash 0.000041 to GCA_055657665.1 against 0.000303 to its nearest
+        B. melitensis. A fourth, independent line: in held-out validation of our previous database,
+        all seven B. suis genomes that were misidentified as B. melitensis matched this one
+        reference, and correcting it raised species concordance from 93.0% to 96.8%.
+
+    GCA_000250835.2  "Brucella melitensis 16M13W" ->  B. abortus
+        MLST-9 ST1, eight of nine alleles shared with the deposited B. abortus GCA_000742195.1 and
+        GCA_000163115.1; ST1 is abortus 9 to melitensis 1, the melitensis being this assembly. The
+        B. abortus assay is held in full, the B. melitensis assay absent.
+
+    GCA_000292125.1  "Brucella suis S2-30"        ->  B. melitensis
+        MLST-9 ST7, eight of nine alleles shared with the deposited B. melitensis GCA_002191935.1;
+        ST7 is melitensis 2 to suis 1, the suis being this assembly. The B. melitensis assay is held
+        in full, the B. suis assay absent. match_status for this record is synonym_match.
+
+
+3. TWO ASSEMBLIES DEPOSITED AS B. MELITENSIS THAT ARE NOT B. MELITENSIS
+
+    GCA_055389085.1  "Brucella melitensis"  ->  B. canis
+        None of the three species assays is held. That is how all five of our deposited B. canis
+        references behave and unlike all six B. melitensis controls, and this is a two-contig
+        assembly, so absence is not an artefact of fragmentation. MLST-9 ST20, shared with the
+        deposited B. canis GCA_000530495.1 0.000060 away, against 0.00118 to its nearest
+        B. melitensis.
+
+    GCA_009823695.1  "Brucella melitensis"  ->  B. suis
+        The B. suis assay is held in full and the B. melitensis assay is absent; Mash 0.000117 to
+        GCA_014884525.1, a deposited B. suis biovar 3. We cannot exclude B. canis, which is a
+        lineage within the B. suis group, so B. suis is the more general of the two readings. ST17
+        is uninformative: only two of our references carry it.
+
+
+4. ONE ASSEMBLY DEPOSITED AS B. INOPINATA THAT IS A CLASSICAL BRUCELLA
+
+    GCA_000662015.2  "Brucella inopinata BO1"  ->  B. canis
+
+        This assembly sits 0.0234, 0.0237 and 0.0243 from the three deposited B. inopinata
+        assemblies GCA_030270765.1, GCA_000182725.1 and GCA_900095155.1 - as far as those sit from
+        the classical species - while sitting 0.0011 from B. suis and 0.0012 from B. canis, that is,
+        inside the classical cluster. GCA_000182725.1 carries the same strain designation BO1 and is
+        0.0237 away, so the two assemblies deposited under that strain name are not the same
+        organism, and we think that is the more useful observation for triage than our own species
+        call.
+
+        The species call B. canis is from Table S5 of the paper cited above, which reaches it by
+        Mash, SNP, PubMLST and phylogenetic analysis. Our own evidence establishes only that this is
+        a classical member of the suis-canis group and not B. inopinata: it holds the B. suis assay,
+        and the regional presence/absence profile we used elsewhere matches a deposited B. suis, so
+        we could not separate suis from canis independently.
+
+        This record carries match_status = species_match, at 97.89% ANI to the B. inopinata type.
+        We mention it because the pass is technically correct and still misleading: every Brucella
+        sits within roughly 97% ANI of every other, so a declared species clears the 95% threshold
+        without being the closest. For this genus the field cannot distinguish a correct name from a
+        wrong one, and five of the ten records above carry species_match or synonym_match.
+
+
+Happy to supply the MLST profiles, the in silico assay results or the distance matrices. The
+evidence for each record is kept with our curation notes at
+https://github.com/duceppemo/mashID/blob/master/curation/label_corrections.tsv
+and the reasoning at
+https://github.com/duceppemo/mashID/blob/master/curation/README.md
+
+With thanks for your work on these resources,
+
+Marc-Olivier Duceppe
+Canadian Food Inspection Agency
+[contact address omitted from this copy]
