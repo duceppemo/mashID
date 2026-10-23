@@ -113,7 +113,7 @@ Two independent checks agree on which rows were truncated. progenomes4 was re-de
 assembly report — match name for name after the repair; the two that differ are the two curated
 corrections, which `apply_label_corrections.py` then applies. Only a change where the stored name is
 a prefix of the re-derived one followed by a comma was accepted: a curated annotation is *entitled*
-to differ from the fasta header (387 brucella rows include `Ochrobactrum anthropi` headers annotated
+to differ from the fasta header (12 of the 387 brucella rows are `Ochrobactrum anthropi` headers annotated
 as `Brucella anthropi`), and overwriting those from the header would undo real curation.
 
 ## Upstream status
@@ -191,7 +191,12 @@ species but below the species threshold, which usually means a divergent or unde
 distance versus 0.009-0.012 for the six genuine *goodii*. It is left labelled as deposited, since
 *goodii* is the closest named species and no better label exists.
 
-## The 2026-10-22 sweep of every pre-built database
+## The 2026-10-22 sweep of the six databases built from NCBI assemblies
+
+Six of the pre-built databases, the ones whose references carry assembly accessions and NCBI names.
+`mycobacteriaceae` is not in the table because its two corrections were found earlier, by the same
+method; `mycobacteriaceae-2025`, `listeria-2025`, `progenomes3` and `refseq_bacteria` are not,
+because at the time they had no metadata sidecar to audit.
 
 Each database's `--confusable` table was computed and then read the way the Databases page
 describes, as a mislabel detector: for every reference, how far it sits from its own namesakes
@@ -201,22 +206,30 @@ four groups that produced candidates ANI is uninformative — the classical *Bru
 single genomospecies, *Shigella* is polyphyletic inside *E. coli*, and NCBI's ANI check resolves
 *Salmonella* only to species.
 
-| database | references | pairs ≤ 0.005 | corrections found |
+The reference counts are those of the databases as they then stood; the pair counts are from the
+confusable tables the sweep computed for them, which were working files and are not kept. The last
+column is what the sweep itself found, by auditing those references. Rows reached later — by typing
+whole submission batches, and by re-auditing each rebuild — brought the curated totals to 29
+*Salmonella* and 2 *Shigella*, as the sections below describe; a sweep of surviving references is
+where this started, not the whole of it.
+
+| database | references | pairs ≤ 0.005 | the sweep found |
 | --- | --- | --- | --- |
 | `listeria` | 1441 | 0 | none |
 | `progenomes4` | 32887 | 0 | none (one representative per species cluster) |
 | `refseq_viral` | 19625 | 765 over 421 refs | none; see below |
 | `brucella` | 387 | 1772 over 147 refs | 3 |
-| `salmonella` | 1442 | 803 over 267 refs | 29 |
-| `escherichia` | 4503 | 2356 over 1631 refs | 2 |
+| `salmonella` | 1442 | 803 over 267 refs | 15 |
+| `escherichia` | 4503 | 2356 over 1631 refs | 1 |
 
 The decisive tests were MLST-9 for *Brucella* (`mlst --scheme brucella`), the Achtman *E. coli*
 scheme for *Shigella*, and SISTR cgMLST for *Salmonella*, each run against controls drawn from the
 same database so that the test was shown to separate the species before it was trusted. MLST also
 settled which member of a near-identical pair was wrong, which distance alone cannot do.
 
-**Where the bad labels concentrate.** All 87 non-*enterica* subspecies labels in the salmonella
-database were checked with SISTR, plus 30 *enterica* as a control: 15 of the 102 conclusive calls
+**Where the bad labels concentrate.** All 87 references of the salmonella database not labelled
+subsp. *enterica* — 70 carrying another subspecies name, 17 *S. bongori* — were checked with SISTR,
+plus 30 *enterica* as a control: 15 of the 102 conclusive calls
 are contradicted, and the rate tracks how rare the label is — `arizonae` 7 of 10, `houtenae` 2 of 3,
 `indica` 1 of 5, `diarizonae` 3 of 29, `salamae` 2 of 23, `enterica` 0 of 30. A rare subspecies name
 has few correct examples to dilute a submission error.
@@ -230,10 +243,10 @@ every rebuild; an audit of the previous database does not cover the new assembli
 
 **Type the whole submission batch, not the surviving references.** Auditing survivors re-discovers
 one batch a record at a time, because every correction changes which genomes dereplication keeps:
-three successive salmonella rebuilds each surfaced one more wrong record from the same two
-submissions. Typing both submissions exhaustively — all 27 assemblies making an explicit
-non-*enterica* subspecies claim, rather than the 4 that happened to be references — ended it and
-produced 11 further corrections, with no inconclusive calls. The result is sharper than "batches are
+two of the rows here were found exactly that way, one on each of two later salmonella rebuilds.
+Typing both submissions exhaustively — all 27 assemblies making an explicit non-*enterica*
+subspecies claim, where only 6 were references in the audited database and 3 of those 6 type as
+deposited — ended it and produced 11 further corrections, with no inconclusive calls. The result is sharper than "batches are
 unreliable": in the CFSAN 2016-10-24 submission **all twelve** `subsp. diarizonae serovar 38:[k]:-`
 records are subsp. *enterica* serovar Inverness, while **all eleven** other non-*enterica* labels in
 that same submission (`60:r:e,n,x` → IIIb 60:r:z, `16:z10:e,n` → Redlands, `59:[k]:z35` →
