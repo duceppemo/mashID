@@ -180,6 +180,28 @@ scripts/reannotate_summary.py /path/to/results --dry-run   # then without --dry-
 rebuilds their summary files from the per-sample tables and the current sidecars, which is also how
 to apply a corrected organism name to results that predate the correction.
 
+Five of the pre-built databases ship a table: `mycobacteriaceae`, `salmonella`, `brucella`,
+`escherichia` and `refseq_viral`. Two were checked on 2026-10-23 and need none, which is worth
+stating rather than leaving silent, since a missing table otherwise looks like an omission:
+
+| database | references within 0.005 of each other | pairs of different organisms |
+| --- | --- | --- |
+| `listeria` | 11,660 pairs | **none**: every species in it is separable |
+| `progenomes4` | **no pair at all** | none, necessarily: it holds one representative per species cluster, so nothing is that close to anything else |
+| `refseq_viral` | — | 765 rows over 421 of its 19,625 references |
+
+Most of the `refseq_viral` rows are what the table is for: distinct entries that k=21 cannot
+separate, such as the *Flavobacterium* phages Fpv5, Fpv8, Fpv10 and Fpv11 at 0.000012 from one
+another. Forty rows are a different thing worth knowing about — one virus under two names, at
+distance zero, where RefSeq carries both the ICTV name and the older familiar one (`Canine
+adenovirus 1` and `Canine mastadenovirus A`, `Human adenovirus 2` and `Human mastadenovirus C`).
+The note is still true there, but it means "either name may be reported", not "two candidate
+organisms".
+
+`refseq_bacteria` has not been checked: at 82,557 references the comparison is some 3.4 billion
+pairs. The contrast with `brucella` is the point of the whole table — there, every held-out
+misidentification carries a "not separable" note, because its species are one genomospecies.
+
 ### Which names count as different organisms
 
 Names are compared as taxonomic claims, not as strings. A name is read as a chain of ranks, and a
