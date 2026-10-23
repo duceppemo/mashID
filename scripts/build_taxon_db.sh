@@ -25,6 +25,8 @@
 #         CORRECTIONS      curated label corrections (curation/label_corrections.tsv) applied before
 #                          binning, so a genome deposited under the wrong species is dereplicated
 #                          against its true relatives instead of surviving as their near-duplicate
+#         CONFUSABLE_DISTANCE  Mash distance within which reference pairs are reported as
+#                          inseparable (default 0.005); 0 skips step 5
 # Needs on PATH: datasets (ncbi-datasets-cli), unzip, mash, make_mashID_db, python3.
 #
 # Steps (each is skipped when its output already exists, so the script can be re-run):
@@ -33,7 +35,8 @@
 #   2. bin the genomes by species (scripts/bin_by_species.py);
 #   3. dereplicate each species bin with Assembly-dereplicator;
 #   4. sketch the survivors with make_mashID_db, excluding references < 100 kb, and write the
-#      metadata sidecar from the assembly report.
+#      metadata sidecar from the assembly report;
+#   5. write the confusable table of inseparable organism pairs, which ships beside the other two.
 set -euo pipefail
 
 work="${1:?Usage: $0 <work_dir> [taxid] [db_name]}"
@@ -128,4 +131,13 @@ fi
 # from the deposited names and undo the correction binning just applied.
 make_mashID_db -i "$input" -o . -p "$name" -s "$sketch_size" -k 21 -t "$threads" \
     --assembly-report "$report" "${corrections[@]/--corrections/--metadata}"
-log "Done: $work/$name.msh  (+ $name.metadata.tsv)"
+
+# 5. The confusable table, which the registry ships beside the sketch and the sidecar: without it a
+# database gives no inseparable-pairs warning, and it used to be an easily forgotten separate run.
+# CONFUSABLE_DISTANCE=0 skips the step.
+if [[ "${CONFUSABLE_DISTANCE:-0.005}" != "0" ]]; then
+    log "5. Writing the confusable table (pairs within ${CONFUSABLE_DISTANCE:-0.005})"
+    make_mashID_db --confusable "$name.msh" --confusable-distance "${CONFUSABLE_DISTANCE:-0.005}" \
+        -t "$threads"
+fi
+log "Done: $work/$name.msh  (+ $name.metadata.tsv, $name.confusable.tsv)"
