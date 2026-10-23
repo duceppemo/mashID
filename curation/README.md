@@ -54,6 +54,21 @@ twins (backups `*.metadata.tsv.bak-20261022`): 44 names in salmonella, 2 in prog
 brucella, escherichia, listeria, mycobacteriaceae or refseq_viral — the last of those stores its
 names verbatim from the GenBank `ORGANISM` line and never passes them through the parser.
 
+The `bins.tsv` of those builds needed the corrections but not the repair, and it is worth being
+clear why: `species_of` derives the `Bin` column with its own literal regex, deliberately kept
+independent of the comment parser so bin names stay byte-stable across versions, and `bins.tsv`
+stores the raw NCBI name with its strain text rather than a parsed one. The comma bug could not
+reach either column. The corrections were applied on 2026-10-22 (backups `bins.tsv.bak-20261022`):
+29 rows in salmonella, 3 in brucella, 2 in escherichia, none in listeria or mycobacteriaceae. A
+binning table covers every genome that was binned, not just the references that survived
+dereplication, which is why salmonella changes 29 rows here against 16 in its sidecar.
+
+All four binning tables of the 2026-10-22 rebuilds report zero changes against the same curation
+file, which is the check that `bin_by_species.py --corrections` really did apply all 36 at build
+time. Re-running on the repaired September tables also changes nothing, and every row's `Bin` still
+agrees with `species_of` of its own `Organism` at that table's rank — the guard against correcting
+one row at a rank different from every other.
+
 Two independent checks agree on which rows were truncated. progenomes4 was re-derived from its own
 `assembly_data_report.jsonl` instead of from the headers and gave the same two rows. For salmonella,
 1,424 of the 1,426 accessions shared with the 2026-10-22 rebuild — which was annotated from a fresh
