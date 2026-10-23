@@ -64,7 +64,7 @@ binning table covers every genome that was binned, not just the references that 
 dereplication, which is why salmonella changes 29 rows here against 16 in its sidecar.
 
 That twin match changes nothing anywhere else, which was checked rather than assumed. Of the 36
-rows, 31 are written as GCF and 5 as GCA, because each was recorded with the accession as it
+rows the file then held, 31 were written as GCF and 5 as GCA, because each was recorded with the accession as it
 appeared in the database where the mislabel was found — so every other database already matched its
 corrections under its own prefix. Audited against the full input sets a rebuild would read, not
 just the binned subsets: 2,022 *Brucella*, 21,543 *Salmonella*, 58,198 *Escherichia*/*Shigella*,
@@ -102,8 +102,8 @@ databases resolves. Two things the move does not fix, by design:
 
 All four binning tables of the 2026-10-22 rebuilds report zero changes against the same curation
 file, and every corrected genome in their `binned/` and `derep/` trees is already in the right
-directory, which is the check that `bin_by_species.py --corrections` really did apply all 36 at
-build time. Re-running on the repaired September tables also changes nothing, and every row's `Bin` still
+directory, which is the check that `bin_by_species.py --corrections` really did apply all 36 rows of
+that day at build time. Re-running on the repaired September tables also changes nothing, and every row's `Bin` still
 agrees with `species_of` of its own `Organism` at that table's rank — the guard against correcting
 one row at a rank different from every other.
 
@@ -153,11 +153,18 @@ Corrections are reported to GenBank/RefSeq (`gb-admin@ncbi.nlm.nih.gov`, cc
   *S. flexneri*. `GCF_002290495.1` sits 0.000074 from the deposited *S. sonnei* `GCF_002248355.1`,
   also ST58, against 0.005480 from its nearest *S. flexneri*.
 
-**All 36 rows have now been reported, and nothing is awaiting a send**: 2 mycobacteriaceae, then 3
-*Brucella* with 15 *Salmonella*, on 2026-10-22; 14 *Salmonella* and `GCF_002290505.1` on 2026-10-23;
-`GCF_002290495.1` in the correction that followed. `GCF_002266055.1`, named in the first report as
-examined but not reported, has no row here: it never met the evidence bar in
-[When to add a row](#when-to-add-a-row).
+Those reports cover 36 of the 46 rows: 2 mycobacteriaceae, then 3 *Brucella* with 15 *Salmonella*,
+on 2026-10-22; 14 *Salmonella* and `GCF_002290505.1` on 2026-10-23; `GCF_002290495.1` in the
+correction that followed. `GCF_002266055.1`, named in the first report as examined but not reported,
+has no row here: it never met the evidence bar in [When to add a row](#when-to-add-a-row).
+
+**Not yet sent — the 10 *Brucella* rows added on 2026-10-23**, from the re-audit of the 2026-10-22
+rebuild: `GCA_000250775.2`, `GCA_000250835.2`, `GCA_000292125.1`, `GCA_009823695.1`,
+`GCA_016091955.1`, `GCA_016091965.1`, `GCA_018604785.1`, `GCA_041861985.1`, `GCA_055389085.1` and
+`GCA_000662015.2`. Four of them NCBI already flags `mismatch`; the rest pass its ANI check, which
+for *Brucella* means little, since every member sits within about 97% ANI of every other and a
+declared species clears the 95% threshold without being the closest. A report for these is still to
+be drafted.
 
 The lesson from the third report is about the cross-reference, not the biology: a claim about *what
 we have already told NCBI* is as checkable as a claim about a genome, and it was the only kind here
