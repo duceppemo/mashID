@@ -26,6 +26,16 @@ from mashid.taxonomy import clean_comment, organism_from_comment
         ("NZ_X.1 Mycobacterium bovis strain X plasmid variant 2", "Mycobacterium bovis"),
         # trailing "sub" in unrelated words must not be treated as a subspecies marker
         ("NZ_X.1 Mycobacterium bovis substrain BCG Pasteur", "Mycobacterium bovis"),
+        # a comma inside a serovar designation is part of the name
+        ("NZ_X.1 Salmonella enterica subsp. arizonae serovar 18:z4,z23:- str. CVM N23850",
+         "Salmonella enterica subsp. arizonae serovar 18:z4,z23:-"),
+        ("NZ_X.1 Salmonella enterica subsp. enterica serovar 1,4,[5],12:i:- chromosome, complete genome",
+         "Salmonella enterica subsp. enterica serovar 1,4,[5],12:i:-"),
+        # ... but a header that omits the space after the comma is still an ordinary word break,
+        # which proGenomes 3 does ("ORS278,complete sequence")
+        ("114615.SAMEA3138227.CU234118 Bradyrhizobium sp. ORS278,complete sequence",
+         "Bradyrhizobium sp. ORS278"),
+        ("NZ_X.1 Mycobacterium mantenii strain E2660 chromosome,complete genome", "Mycobacterium mantenii"),
     ],
 )
 def test_organism_from_comment(comment, expected):

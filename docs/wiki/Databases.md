@@ -92,6 +92,19 @@ assembly report (`--annotate --assembly-report`) or a curated `--metadata` table
 | `progenomes3` | 2023-03 | proGenomes v3 representative genomes, sketched from the proGenomes fasta. | Header format differs from NCBI's; names come from the sidecar generated on first use, check them with `--check`. Superseded by `progenomes4`. |
 | `refseq_bacteria` | 2023-01-19 | RefSeq bacteria, dereplicated at 0.01. | Large (653 MB); three years old. |
 
+`mycobacteriaceae-2025`, `listeria-2025`, `progenomes3` and `refseq_bacteria` ship without a
+metadata sidecar, so mashID parses each reference's name from its own fasta header on every run.
+Two consequences follow. First, a change to the name parser reaches them with no file to update:
+the fix that stopped truncating *Salmonella* antigenic formulae at the first comma gives 25
+`refseq_bacteria` references their full formula as soon as the new version is installed. Second, a
+curated label correction cannot be applied to the first three at all —
+`scripts/apply_label_corrections.py` keys on an assembly accession and their sketch IDs carry none,
+being named after a contig (`JACEGV010000031.1_Mycobacterium_canetti_strain_ITM_C02321`) or a
+proGenomes sample, which is also what the `Accession` column reports for them. So
+`mycobacteriaceae-2025` still identifies the mislabelled `GCA_013697125.1` as *M. canetti*, and only
+`mycobacteriaceae` carries that correction. Every `refseq_bacteria` sketch ID does carry a GCF
+accession, so it alone could be given a sidecar and corrected without a rebuild.
+
 `scripts/build_virus_db.sh` builds a database of every RefSeq viral genome from the NCBI RefSeq release
 files, with names and TaxIDs from the GenBank flat files (`scripts/refseq_gbff_metadata.py`).
 

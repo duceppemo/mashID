@@ -51,7 +51,23 @@ def _tokens(text: str) -> list[str]:
     # to the designation, as in the Salmonella antigenic formulae "serovar 18:z4,z23:-" and
     # "serovar 16:z10:e,n,x,z15". Replacing every comma with a space truncated those at the first
     # comma, leaving "serovar 18:z4", which is not a valid formula.
-    return [stripped for t in text.split() if (stripped := t.strip(",;"))]
+    #
+    # The exception is a header that leaves out the space after a comma, as proGenomes 3 does in
+    # "Bradyrhizobium sp. ORS278,complete sequence": there the comma is an ordinary word break that
+    # happens to look internal, and keeping the token whole appends "complete" to the strain
+    # designation. A formula never runs into one of the words that end a name anyway, so splitting
+    # on that and only that tells the two apart.
+    tokens: list[str] = []
+    for raw in text.split():
+        tok = raw.strip(",;")
+        if not tok:
+            continue
+        segments = tok.split(",")
+        if len(segments) > 1 and any(s.lower() in _STOP_WORDS for s in segments[1:]):
+            tokens.extend(s for s in segments if s)
+        else:
+            tokens.append(tok)
+    return tokens
 
 
 def _find_binomial(tokens: list[str]) -> tuple[int, str, str] | None:
