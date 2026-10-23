@@ -42,6 +42,27 @@ reports — keeps the deposited name until a rebuild. `Identification` and `TaxI
 way. A correction that matches no row of any target is reported on stderr rather than passing
 silently.
 
+### The deployed September sidecars, repaired 2026-10-22
+
+The databases built on 2026-09-22 were annotated before `_tokens` stopped splitting a serovar
+designation at its commas, so their sidecars carry names truncated at the first comma — most
+consequentially `serovar 1` and `serovar 4` for the monophasic Typhimurium formulae `1,4,[5],12:i:-`
+and `4,[5],12:i:-`. A rebuild is not needed to repair that, because the sidecar keeps the
+reference's own fasta header verbatim in `Description`: parsing that column again with the fixed
+code restores the full name. Done on 2026-10-22 for the deployed copies and their build-directory
+twins (backups `*.metadata.tsv.bak-20261022`): 44 names in salmonella, 2 in progenomes4, none in
+brucella, escherichia, listeria, mycobacteriaceae or refseq_viral — the last of those stores its
+names verbatim from the GenBank `ORGANISM` line and never passes them through the parser.
+
+Two independent checks agree on which rows were truncated. progenomes4 was re-derived from its own
+`assembly_data_report.jsonl` instead of from the headers and gave the same two rows. For salmonella,
+1,424 of the 1,426 accessions shared with the 2026-10-22 rebuild — which was annotated from a fresh
+assembly report — match name for name after the repair; the two that differ are the two curated
+corrections, which `apply_label_corrections.py` then applies. Only a change where the stored name is
+a prefix of the re-derived one followed by a comma was accepted: a curated annotation is *entitled*
+to differ from the fasta header (387 brucella rows include `Ochrobactrum anthropi` headers annotated
+as `Brucella anthropi`), and overwriting those from the header would undo real curation.
+
 ## Upstream status
 
 Corrections are reported to GenBank/RefSeq (`gb-admin@ncbi.nlm.nih.gov`, cc
