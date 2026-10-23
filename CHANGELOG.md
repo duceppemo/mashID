@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## 0.3.1 (2026-10-23)
+
+### Changed
+- The `brucella` database is rebuilt with ten further label corrections, found by re-auditing the
+  2026-10-22 build's own confusable table: every cross-name pair below its dereplication threshold
+  means one of the two names is wrong, because the classical *Brucella* species sit 0.2 to 0.5%
+  apart. Each correction was adjudicated by the published species-specific multiplex qPCR of Hoover
+  et al. 2026 (*Microbiol Spectr* 14:e02974-25) together with MLST-9 across all 460 reference
+  genomes. 395 references become 389, and held-out species concordance rises from 93.0% to **96.8%**,
+  with *B. abortus*, *B. canis*, *B. melitensis* and *B. suis* each 20/20. Sub-threshold cross-name
+  pairs fall from nine to two: the *B. intermedia*/*B. ciceri* batch, and the *canis*/*suis*
+  boundary, which is a lineage inside a species rather than a labelling error.
+- `scripts/build_taxon_db.sh` now writes the `.confusable.tsv` table as a fifth step. The registry
+  ships three files per database and the script wrote two, leaving the table to a separate run that
+  was easy to forget — and a database without it gives no inseparable-pairs warning at all.
+
 ## 0.3.0 (2026-10-23)
 
 ### Changed

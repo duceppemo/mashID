@@ -124,21 +124,22 @@ REGISTRY: dict[str, RemoteDatabase] = {
         ),
         RemoteDatabase(
             name="brucella",
-            filename="brucella_2026-10-22.msh",
-            url="https://ndownloader.figshare.com/files/70524939",
-            md5="64a85eb2a226e55f95bc71f57aa071bd",
-            size=31_728_432,
+            filename="brucella_2026-10-23.msh",
+            url="https://ndownloader.figshare.com/files/70543797",
+            md5="a13ab0d6e86f58ef99ddcfbe18efeed3",
+            size=31_247_336,
             description="Brucella (NCBI taxon 234, including former Ochrobactrum): 2022 GenBank assemblies as of "
-                        "2026-10-22, dereplicated at 99.97% identity to 395 references (29 species) with NCBI "
-                        "TaxIDs. k=21, s=10000. 3 mislabelled references were corrected before binning. "
-                        "Classical species are nearest-reference calls; biovars not resolved.",
-            doi="10.6084/m9.figshare.33970168.v3",
-            metadata_url="https://ndownloader.figshare.com/files/70524936",
-            metadata_md5="c8759d5b7c31b30dac1dcee8bc0cc686",
-            metadata_size=103_110,
-            confusable_url="https://ndownloader.figshare.com/files/70524933",
-            confusable_md5="e7b72a4060a8ced167dc5a1d81eb150d",
-            confusable_size=137_285,
+                        "2026-10-23, dereplicated at 99.97% identity to 389 references (29 species) with NCBI "
+                        "TaxIDs. k=21, s=10000. 13 mislabelled references were corrected before binning, which "
+                        "raises held-out species concordance from 93.0% to 96.8%. Classical species are "
+                        "nearest-reference calls; biovars not resolved.",
+            doi="10.6084/m9.figshare.33970168.v4",
+            metadata_url="https://ndownloader.figshare.com/files/70543791",
+            metadata_md5="caef947e2d66502b1a27fa14cda898e4",
+            metadata_size=102_793,
+            confusable_url="https://ndownloader.figshare.com/files/70543785",
+            confusable_md5="bce0a2ee2d0eca81e02a8fd5a3688677",
+            confusable_size=121_851,
         ),
         RemoteDatabase(
             name="escherichia",
