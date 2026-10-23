@@ -32,7 +32,7 @@ Mebibytes, as everywhere else in the output.
 | `refseq_viral` | All 19,625 viral genomes and genome segments of NCBI RefSeq release 237 (6427 phages), current ICTV species names and TaxIDs from the GenBank flat files. k=21, s=2000. Ships with its metadata sidecar. Median reference 6.9 kb, so mashID applies no reference-length filter. For virus identification and for prophage or viral contamination detection in any sample. [Figshare](https://doi.org/10.6084/m9.figshare.34018548) | 294.0 MB |
 | `progenomes4` | proGenomes 4 representative genomes: 32,887 species-cluster representatives across 4384 genera of bacteria and archaea, current NCBI names and TaxIDs for all. k=21, s=2000. Ships with its metadata sidecar. For species-level screening of anything. [Figshare](https://doi.org/10.6084/m9.figshare.33968806) | 519.3 MB |
 | `progenomes3` | proGenomes v3 representative genomes (2023), names parsed from headers. Superseded by `progenomes4`. [Figshare](https://doi.org/10.6084/m9.figshare.22312282) | 330.9 MB |
-| `refseq_bacteria` | RefSeq bacteria as of 2023-01-19, dereplicated at 99% identity: 82,557 references across 32,750 organisms. It also ships a metadata sidecar, added on 2026-10-22, carrying current NCBI names and TaxIDs for 82,547 of them, so its names no longer come from the reference headers. k=21, s=1000. Three years old; prefer `progenomes4` for current names at species level. [Figshare](https://doi.org/10.6084/m9.figshare.22312240) | 671.2 MB |
+| `refseq_bacteria` | RefSeq bacteria as of 2023-01-19, dereplicated at 99% identity: 82,557 references across 32,750 organisms. It also ships a metadata sidecar, added on 2026-10-22, carrying current NCBI names and TaxIDs for 82,547 of them, so its names no longer come from the reference headers. k=21, s=1000. Three years old and superseded in practice by `progenomes4`, which covers the same broad-screening niche with current names; kept for reproducibility and ships no confusable table. [Figshare](https://doi.org/10.6084/m9.figshare.22312240) | 671.2 MB |
 
 Databases live in `$MASHID_DB_DIR` if set, else `$XDG_DATA_HOME/mashID/db`
 (`~/.local/share/mashID/db`). Pass a name (`-d listeria`) or a path (`-d /db/x.msh`) to `mashID`.
@@ -198,8 +198,10 @@ adenovirus 1` and `Canine mastadenovirus A`, `Human adenovirus 2` and `Human mas
 The note is still true there, but it means "either name may be reported", not "two candidate
 organisms".
 
-`refseq_bacteria` has not been checked: at 82,557 references the comparison is some 3.4 billion
-pairs. The contrast with `brucella` is the point of the whole table — there, every held-out
+`refseq_bacteria` is deliberately not checked and will not be: 82,557 references is some 3.4
+billion pairs, for a 2023 sketch whose niche `progenomes4` now covers with current names.
+
+The contrast with `brucella` is the point of the whole table — there, every held-out
 misidentification carries a "not separable" note, because its species are one genomospecies.
 
 ### Which names count as different organisms
