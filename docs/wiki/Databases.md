@@ -103,7 +103,11 @@ being named after a contig (`JACEGV010000031.1_Mycobacterium_canetti_strain_ITM_
 proGenomes sample, which is also what the `Accession` column reports for them. So
 `mycobacteriaceae-2025` still identifies the mislabelled `GCA_013697125.1` as *M. canetti*, and only
 `mycobacteriaceae` carries that correction. Every `refseq_bacteria` sketch ID does carry a GCF
-accession, so it alone could be given a sidecar and corrected without a rebuild.
+accession, so it alone can be annotated without a rebuild, and a sidecar for it has been built:
+names and TaxIDs for 82,547 of its 82,557 references from NCBI Datasets (the other ten are RefSeq
+records withdrawn since 2023, which keep their header names), with the five curated corrections
+that fall inside it applied. It reaches users once that sidecar is uploaded beside the sketch and
+the registry gains its `metadata_url`; until then `refseq_bacteria` still reports header names.
 
 `scripts/build_virus_db.sh` builds a database of every RefSeq viral genome from the NCBI RefSeq release
 files, with names and TaxIDs from the GenBank flat files (`scripts/refseq_gbff_metadata.py`).

@@ -19,18 +19,28 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 
 try:
     from mashid import MashIDError
     from mashid.fileutil import backup as make_backup
-    from mashid.names import BIN_RANKS, normalise_header, species_of
+    from mashid.names import BIN_RANKS, normalise_header, paired_accession, species_of
     from mashid.names import read_corrections as _read_corrections
 except ImportError as exc:  # an installed mashid older than this script, or none at all
     sys.exit(f"error: this script needs the mashid package it ships with, but importing it failed "
              f"({exc}).\nInstall the matching version from the repository root: pip install -e .")
 
 NOTE = " [mashID: deposited as {old!r}; corrected to {new!r}, see curation/label_corrections.tsv]"
+
+
+def assemblies(accessions: Iterable[str]) -> set[str]:
+    """Collapse each GenBank/RefSeq pair to one assembly, so counts are of assemblies not keys.
+
+    ``read_corrections`` registers every row under both accessions of the assembly, which would
+    otherwise double the "n correction(s) loaded" count and let one unmatched row be reported twice.
+    """
+    return {min(a, paired_accession(a) or a) for a in accessions}
 
 
 def bin_of(organism: str, rank: str = "species") -> str:
@@ -138,7 +148,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     corrections = read_corrections(args.corrections)
-    print(f"{len(corrections)} correction(s) loaded from {args.corrections}")
+    print(f"{len(assemblies(corrections))} correction(s) loaded from {args.corrections}")
     total, matched = 0, set()
     for target in args.targets:
         if not target.is_file():
@@ -151,10 +161,10 @@ def main(argv: list[str] | None = None) -> int:
     # A correction that matched nothing is worth saying: the accession may be spelled differently,
     # or this may not be the table it was meant for. But one curation file covers every database,
     # so most of its rows legitimately miss any single target; summarise rather than list each.
-    unused = sorted(set(corrections) - matched)
+    unused = sorted(assemblies(corrections) - assemblies(matched))
     if unused:
         shown = ", ".join(unused[:4]) + (", ..." if len(unused) > 4 else "")
-        print(f"{len(unused)} of {len(corrections)} correction(s) matched no row of any target; "
+        print(f"{len(unused)} of {len(assemblies(corrections))} correction(s) matched no row of any target; "
               f"normal when one curation file covers several databases: {shown}", file=sys.stderr)
     if args.dry_run:
         print(f"\ndry run: {total} row(s) would change, nothing written")

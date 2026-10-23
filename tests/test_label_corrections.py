@@ -32,21 +32,22 @@ applier = _load("apply_label_corrections")
 def test_extra_columns_are_ignored(tmp_path, read):
     p = tmp_path / "corrections.tsv"
     p.write_text(CORRECTION)
-    assert read(p) == {"GCA_1.1": ("Genusb two", "222")}
+    # the RefSeq accession of the same assembly is registered alongside the row's own
+    assert read(p) == {"GCA_1.1": ("Genusb two", "222"), "GCF_1.1": ("Genusb two", "222")}
 
 
 @pytest.mark.parametrize("read", [binner.load_corrections, applier.read_corrections])
 def test_csv_and_flexible_headers(tmp_path, read):
     p = tmp_path / "corrections.csv"
     p.write_text("assembly accession,organism name\nGCA_1.1,Genusb two\n")
-    assert read(p) == {"GCA_1.1": ("Genusb two", "")}
+    assert read(p) == {"GCA_1.1": ("Genusb two", ""), "GCF_1.1": ("Genusb two", "")}
 
 
 @pytest.mark.parametrize("read", [binner.load_corrections, applier.read_corrections])
 def test_rows_without_accession_or_organism_are_skipped(tmp_path, read):
     p = tmp_path / "corrections.tsv"
     p.write_text("Accession\tOrganism\n\tGenusb two\nGCA_2.1\t\nGCA_1.1\tGenusb two\n")
-    assert read(p) == {"GCA_1.1": ("Genusb two", "")}
+    assert read(p) == {"GCA_1.1": ("Genusb two", ""), "GCF_1.1": ("Genusb two", "")}
 
 
 @pytest.mark.parametrize("read", [binner.load_corrections, applier.read_corrections])
@@ -230,6 +231,27 @@ def test_a_correction_that_matches_nothing_is_reported(tmp_path, capsys):
     assert applier.main([str(_corrections(tmp_path)), str(p), "--dry-run"]) == 0
     err = capsys.readouterr().err
     assert "1 of 1 correction(s) matched no row" in err and "GCA_1.1" in err
+
+
+def test_a_genbank_row_corrects_the_refseq_accession_of_the_same_assembly(tmp_path, capsys):
+    """One assembly, two accessions: a database built from RefSeq carries GCF_1.1 where the
+    curation file, written from the GenBank record, says GCA_1.1. The correction still applies,
+    and the pair counts as one correction rather than two."""
+    p = tmp_path / "db.metadata.tsv"
+    p.write_text(SIDECAR_HEADER + "GCF_1.1\tGenusa one\t111\t4000000\t1000\t/x/GCF_1.1.fna\tcontig one\n")
+    assert applier.main([str(_corrections(tmp_path)), str(p)]) == 0
+    row = p.read_text().splitlines()[1].split("\t")
+    assert row[1] == "Genusb two" and row[2] == "222"
+    out = capsys.readouterr()
+    assert "1 correction(s) loaded" in out.out and "matched no row" not in out.err
+
+
+def test_the_version_is_not_varied_when_pairing_accessions(tmp_path, capsys):
+    """GCF_1.2 is a different assembly from GCA_1.1, so nothing is corrected."""
+    p = tmp_path / "db.metadata.tsv"
+    p.write_text(SIDECAR_HEADER + "GCF_1.2\tGenusa one\t111\t4000000\t1000\t/x/GCF_1.2.fna\tcontig one\n")
+    assert applier.main([str(_corrections(tmp_path)), str(p), "--dry-run"]) == 0
+    assert "1 of 1 correction(s) matched no row" in capsys.readouterr().err
 
 
 def test_missing_columns_in_target_is_an_error(tmp_path):

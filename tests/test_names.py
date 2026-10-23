@@ -204,4 +204,5 @@ def test_read_corrections_reports_a_missing_file(tmp_path):
 def test_read_corrections_accepts_a_bom_and_extra_columns(tmp_path):
     p = tmp_path / "c.tsv"
     p.write_bytes("﻿Accession\tOrganism\tTaxID\tReason\nGCA_1.1\tGenusb two\t222\twhy\n".encode())
-    assert read_corrections(p) == {"GCA_1.1": ("Genusb two", "222")}
+    assert read_corrections(p) == {"GCA_1.1": ("Genusb two", "222"),
+                                   "GCF_1.1": ("Genusb two", "222")}  # the assembly's RefSeq twin

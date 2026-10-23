@@ -151,6 +151,16 @@ def species_of(organism: str, rank: str = "species") -> str:
     return re.sub(r"[^A-Za-z0-9_.:,\[\]-]", "_", name)
 
 
+def paired_accession(accession: str) -> str | None:
+    """The same assembly's other accession: GCA_000195955.2 <-> GCF_000195955.2, else None."""
+    prefix = accession[:4]
+    if prefix == "GCA_":
+        return "GCF_" + accession[4:]
+    if prefix == "GCF_":
+        return "GCA_" + accession[4:]
+    return None
+
+
 def read_corrections(path: Path) -> dict[str, tuple[str, str]]:
     """Read a TSV/CSV of curated labels into ``{accession: (organism, taxid)}``.
 
@@ -174,5 +184,13 @@ def read_corrections(path: Path) -> dict[str, tuple[str, str]]:
         acc = (row.get(acc_col) or "").strip()
         organism = (row.get(org_col) or "").strip()
         if acc and organism:
-            out[acc] = (organism, (row.get(tax_col) or "").strip() if tax_col else "")
+            value = (organism, (row.get(tax_col) or "").strip() if tax_col else "")
+            out[acc] = value
+            # GCA_000195955.2 and GCF_000195955.2 are one assembly under its GenBank and its RefSeq
+            # accession, so a curated name for either holds for both, and one curation file can
+            # correct databases built from either source. The version is not varied: that would be a
+            # different assembly. An explicit row always wins over the twin it is registered under.
+            twin = paired_accession(acc)
+            if twin:
+                out.setdefault(twin, value)
     return out

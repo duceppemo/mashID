@@ -63,6 +63,14 @@ reach either column. The corrections were applied on 2026-10-22 (backups `bins.t
 binning table covers every genome that was binned, not just the references that survived
 dereplication, which is why salmonella changes 29 rows here against 16 in its sidecar.
 
+`refseq_bacteria`, which had no sidecar at all, was given one on the same day (82,547 of 82,557
+references annotated from NCBI Datasets) and five of the corrections fall inside it. One of those
+five is the reason `read_corrections` now registers each row under both accessions of its assembly:
+the curation file records the *M. goodii* genome as `GCA_025822535.1` because that is the record we
+examined, while `refseq_bacteria` carries it as `GCF_025822535.1`, and the correction used to miss
+it in silence. The two accessions are one assembly in GenBank and in RefSeq, so a curated name for
+either holds for both. The version is not varied, which would be a different assembly.
+
 The `derep/` tree keeps each genome in a directory named for the bin it was binned as, so a
 mislabelled reference stays filed under the wrong species until its file is moved there too — which
 the tables alone do not do. Moved on 2026-10-22: 16 genomes in salmonella, 3 in brucella, 1 in
