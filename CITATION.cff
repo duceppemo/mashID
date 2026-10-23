@@ -7,13 +7,14 @@ authors:
     given-names: Marc-Olivier
 version: 0.3.0
 date-released: "2026-10-23"
-# The concept DOI, which resolves to the latest version: 0.3.0's own version DOI is minted by
-# Zenodo when the tag is published, and is added to the list below once it exists.
-doi: 10.5281/zenodo.22888109
+doi: 10.5281/zenodo.23586557
 identifiers:
   - type: doi
     value: 10.5281/zenodo.22888109
     description: "Concept DOI: resolves to the latest version"
+  - type: doi
+    value: 10.5281/zenodo.23586557
+    description: "Version DOI for 0.3.0"
   - type: doi
     value: 10.5281/zenodo.23570108
     description: "Version DOI for 0.2.9"
