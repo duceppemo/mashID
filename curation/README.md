@@ -129,14 +129,32 @@ Corrections are reported to GenBank/RefSeq (`gb-admin@ncbi.nlm.nih.gov`, cc
   `GCF_002266055.1` were explicitly listed as *not* reported, since only negative evidence exists
   for them.
 
-**Not yet sent** — the 15 records found after that report went out, all of them on the rebuilds of
-2026-10-22: 14 *Salmonella* (11 of the twelve `diarizonae serovar 38:[k]:-` records in the CFSAN
-2016-10-24 submission, `GCF_026132465.1` and `GCF_026132575.1` from the Sichuan 2022-11-10
-submission, and `GCF_016903075.1`, the one deposited under the common label) and `GCF_002290505.1`
-(*Shigella*). A follow-up organised by submission rather than by
-record, including the eleven same-submission controls that type exactly as deposited, is drafted and
-awaiting a send. Keep this list accurate: a row here is not evidence that anyone upstream has been
-told about it.
+- **2026-10-23** — the 15 records found after that report went out, all of them on the rebuilds of
+  2026-10-22: 14 *Salmonella* (11 of the twelve `diarizonae serovar 38:[k]:-` records in the CFSAN
+  2016-10-24 submission, `GCF_026132465.1` and `GCF_026132575.1` from the Sichuan 2022-11-10
+  submission, and `GCF_016903075.1`, the one deposited under the common label) and `GCF_002290505.1`
+  (*Shigella*). Organised by submission rather than by record, because that turned out to be the
+  unit the errors occur in, and including the eleven same-submission controls that type exactly as
+  deposited — evidence that the discrepancy is not an artefact of our method or of one submitter's
+  workflow.
+
+That accounts for 35 of the 36 rows: 2 mycobacteriaceae, 3 *Brucella* and 15 *Salmonella* in the
+first report, 14 *Salmonella* and `GCF_002290505.1` in the second. **Nothing is awaiting a send**,
+with one loose end worth checking rather than assuming: `GCF_002290495.1`, the other half of the
+*Shigella* pair, is named in the 2026-10-23 report only as the cross-referenced partner of
+`GCF_002290505.1` ("which we reported to you separately"), while the entry above for 2026-10-22
+records that the pair was *excluded* from the first report for resting on negative evidence. Both
+cannot be true. If it was never reported in its own right, it is the one record still to send, and
+the evidence for it is now positive rather than negative: its partner types as a deposited *S.
+sonnei* ST58, and the two cannot both be correctly named.
+
+Keep this section honest: a row in `label_corrections.tsv` is not evidence that anyone upstream has
+been told about it, so a new row means this section is out of date until it names that row's report.
+
+The text of the second report is kept at
+[`reports/2026-10-23_ncbi_salmonella_shigella.txt`](reports/2026-10-23_ncbi_salmonella_shigella.txt),
+with the sender's contact address omitted, so what was claimed upstream stays checkable against
+what the evidence actually supports. The first report predates this directory.
 
 NCBI maintains the ANI flag but not the records themselves, so the organism names change only if the
 submitting groups agree; a report is not a fix.

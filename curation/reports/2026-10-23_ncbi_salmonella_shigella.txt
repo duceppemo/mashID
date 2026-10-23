@@ -1,0 +1,139 @@
+# The organism-assignment report sent to GenBank/RefSeq on 2026-10-23, kept for the record.
+# Verbatim as sent, except that the sender's contact address is omitted here.
+
+To:  gb-admin@ncbi.nlm.nih.gov
+Cc:  genomes@ncbi.nlm.nih.gov
+Subject: Organism assignment, follow-up: 15 further assemblies (14 Salmonella enterica, 1 Shigella)
+
+Dear GenBank/RefSeq staff,
+
+This follows our report of 2026-10-22 concerning 3 Brucella and 15 Salmonella enterica
+assemblies. Rebuilding our mashID reference databases with those corrections applied surfaced 15
+further assemblies whose organism name is not supported by their sequence. As before we are
+reporting them for review with the submitters and are not requesting a taxonomy change.
+
+The previous report listed records one at a time. This one is organised by submission, because
+that turned out to be the unit in which the errors occur, and we think that makes them easier for
+you to triage. Methods are unchanged: SISTR 1.0.2 cgMLST for Salmonella subspecies, mlst 2.33.1
+with the PubMLST ecoli_achtman_4 scheme for Shigella, controls drawn from the same assembly set.
+
+
+1. SALMONELLA ENTERICA, Center for Food Safety and Applied Nutrition, released 2016-10-24
+
+This submission contains 23 assemblies carrying an explicit non-enterica subspecies name across
+four serovar designations. We typed all 23. The result splits cleanly by serovar designation:
+
+  ALL TWELVE records designated "subsp. diarizonae serovar 38:[k]:-" type as subsp. enterica
+  serovar Inverness, which is a subsp. I serovar:
+
+    accession        SISTR subspecies   SISTR serovar   alleles   match_status
+    GCF_001832225.1  enterica           Inverness           320   derived_species_match
+    GCF_001832245.1  enterica           Inverness           318   derived_species_match
+    GCF_001832285.1  enterica           Inverness           320   species_match
+    GCF_001832305.1  enterica           Inverness           321   derived_species_match
+    GCF_001832445.1  enterica           Inverness           321   derived_species_match
+    GCF_001832465.1  enterica           Inverness           321   species_match
+    GCF_001832525.1  enterica           Inverness           320   derived_species_match
+    GCF_001832585.1  enterica           Inverness           321   species_match
+    GCF_001832665.1  enterica           Inverness           320   derived_species_match
+    GCF_001832805.1  enterica           Inverness           319   derived_species_match
+    GCF_001832825.1  enterica           Inverness           321   species_match
+    GCF_001832845.1  enterica           Inverness           319   derived_species_match
+
+  (GCF_001832225.1 was in our previous report; the other eleven are new.)
+
+  ALL ELEVEN records in the same submission carrying a different non-enterica designation type
+  as subsp. diarizonae, exactly as deposited. These are not errors; we list them because they are
+  controls from the same submission, and they show the discrepancy above is not an artefact of our
+  method or of this submitter's workflow:
+
+    GCF_001832335.1, GCF_001832385.1, GCF_001832405.1, GCF_001832425.1, GCF_001832505.1,
+    GCF_001832565.1, GCF_001832765.1, GCF_001832775.1  "diarizonae serovar 60:r:e,n,x"
+        -> diarizonae, IIIb 60:r:z, 308-311 alleles
+    GCF_001832605.1, GCF_001832645.1  "diarizonae serovar 16:z10:e,n"
+        -> diarizonae, Redlands, 319-320 alleles
+    GCF_001832725.1  "diarizonae serovar 59:[k]:z35"
+        -> diarizonae, IIIb 38:(k):z35, 322 alleles
+
+So within one submission, one serovar designation is wrong in 12 of 12 records and the other three
+are right in 11 of 11. That pattern points at the 38:[k]:- designation itself rather than at the
+submission as a whole, which may help in deciding what to ask the submitter.
+
+
+2. SALMONELLA ENTERICA, Sichuan Agricultural University, released 2022-11-10
+
+All four assemblies in this submission carrying "subsp. arizonae" type as subsp. enterica:
+
+    accession        SISTR subspecies   SISTR serovar   alleles   match_status
+    GCF_026132345.1  enterica           Apeyeme             325   species_match
+    GCF_026132355.1  enterica           Cerro               324   derived_species_match
+    GCF_026132465.1  enterica           Cerro               324   derived_species_match
+    GCF_026132575.1  enterica           Cerro               324   species_match
+
+  (The first two were in our previous report; GCF_026132465.1 and GCF_026132575.1 are new.)
+  Apeyeme and Cerro are subsp. enterica (I) serovars, so here too the deposited subspecies and the
+  deposited serovar are mutually inconsistent in the record as it stands.
+
+
+3. SALMONELLA ENTERICA, Nanjing Agricultural University, released 2021-02-17
+
+This one runs the other way: a subsp. enterica name on a genome that is not subsp. enterica. We
+mention the direction because it means the record would not be caught by screening the rare
+subspecies names, which is how we found all the others.
+
+  GCF_016903075.1  "Salmonella enterica subsp. enterica"
+                   ->  Salmonella enterica subsp. salamae
+
+      SISTR cgMLST assigns subsp. salamae, serovar II 58:d:z8, on 330 matching alleles, the
+      maximum the scheme reports. It lies 0.000542 (mash, k=21, s=10000) from GCF_002034565.1,
+      which is deposited as "subsp. salamae serovar 58:d:z6" and which SISTR independently
+      confirms as salamae II 58:d:z6, also on 330 alleles. Same serogroup, adjacent serovar
+      designation: two subsp. salamae genomes of which only one is named consistently.
+      match_status = derived_species_match, i.e. ANI confirmed the species and not the subspecies.
+
+
+4. SHIGELLA, submitter "JCVI", released 2017-09-12
+
+  GCF_002290505.1  "Shigella flexneri"  ->  Shigella sonnei
+
+      ST58 in the Achtman E. coli scheme, with all seven alleles identical to GCF_002248345.1
+      (adk-6 fumC-4 gyrB-4 icd-16 mdh-24 purA-8 recA-14), which the same submitter deposited as
+      S. sonnei on 2017-08-11. ST58 is therefore positively attested among your S. sonnei records
+      rather than merely absent from S. flexneri. Six of the seven also match the S. sonnei
+      assembly GCF_013374815.1 (ST155), differing only at gyrB.
+      All five S. flexneri controls we typed are ST245 and share only adk-6 with it.
+      Mash distance 0.000036 to GCF_002290495.1 - the consecutive accession in the same
+      submission, which we reported to you separately as S. flexneri that is really S. sonnei -
+      against 0.005470 to its nearest S. flexneri, a 150-fold contrast.
+      Note GCF_002290495.1 and GCF_002290505.1 cannot both be correctly named.
+
+  We typed the other ten members of that submission and they need nothing: they spread over nine
+  unrelated sequence types. Two of them (GCF_002317065.1 "S. sonnei" ST10, GCF_002317935.1
+  "S. boydii" ST48) carry STs more typical of E. coli than of their deposited species, and
+  GCF_002290485.1 ("S. boydii") and GCF_002317875.1 ("S. sonnei") share ST877 and all seven
+  alleles, but they sit 0.003349 apart with each closer to an E. coli assembly than to the other,
+  which we read as ordinary Shigella/E. coli polyphyly. We are not making a claim about any of
+  those four.
+
+
+5. ONE OBSERVATION THAT MAY BE USEFUL
+
+None of the 27 Salmonella assemblies in section 1 and 2 carries match_status = subspecies_match;
+all are species_match or derived_species_match. Combined with the previous report, where
+subspecies_match never disagreed with SISTR in 13 conclusive records, the field continues to look
+like a sound positive signal and its absence like a reliable marker of "not yet verified at
+subspecies level". A single submission being able to carry twelve copies of one wrong subspecies
+name is consistent with that: nothing upstream was in a position to contradict it.
+
+
+Happy to supply the SISTR reports, MLST outputs or distance matrices on request. The evidence for
+each record is kept with our curation notes at
+https://github.com/duceppemo/mashID/blob/master/curation/label_corrections.tsv
+and the reasoning at
+https://github.com/duceppemo/mashID/blob/master/curation/README.md
+
+With thanks for your work on these resources,
+
+Marc-Olivier Duceppe
+Canadian Food Inspection Agency
+[contact address omitted from this copy]
