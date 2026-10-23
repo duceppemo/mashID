@@ -1,0 +1,52 @@
+# DRAFT, NOT SENT. A correction to the report of 2026-10-23 plus the one record of the 36 that has
+# never been reported in its own right. The sender's contact address is omitted from this copy.
+
+To:  gb-admin@ncbi.nlm.nih.gov
+Cc:  genomes@ncbi.nlm.nih.gov
+Subject: Organism assignment: correction to our 2026-10-23 message, and GCF_002290495.1
+
+Dear GenBank/RefSeq staff,
+
+Two things, the first of which is a correction to our own record rather than to yours.
+
+1. A MISSTATEMENT IN OUR MESSAGE OF 2026-10-23
+
+In section 4 of that message, about GCF_002290505.1, we described the adjacent accession
+GCF_002290495.1 as one "we reported to you separately". That is not so, and we apologise for it.
+Our earlier report of 2026-10-22 deliberately set both members of that pair aside, because at the
+time the only evidence we had for either was negative: ST58 was absent from the S. flexneri
+assemblies we had typed, which is not the same as its being attested among S. sonnei. No separate
+report was ever sent. Nothing else in the 2026-10-23 message depends on that sentence, and the
+evidence given there for GCF_002290505.1 stands as written.
+
+2. GCF_002290495.1, reported here for the first time
+
+  GCF_002290495.1  "Shigella flexneri"  ->  Shigella sonnei
+
+      MLST (ecoli_achtman_4) ST58. Six of its seven alleles are identical to the S. sonnei
+      assembly GCF_013374815.1 (ST155), differing only at gyrB. The S. flexneri controls we typed
+      are ST245 and ST1022 and share no allele with it at adk, fumC, mdh, purA or recA.
+      Mash distance (k=21, s=10000) 0.000074 to GCF_002248355.1, which is deposited as S. sonnei
+      and is also ST58, against 0.005480 to its nearest S. flexneri: a 74-fold contrast.
+
+      What has changed since 2026-10-22 is that the evidence is now positive rather than absent.
+      ST58 is attested among your S. sonnei records: GCF_002248345.1, deposited as S. sonnei by
+      the same submitter on 2017-08-11, carries all seven ST58 alleles
+      (adk-6 fumC-4 gyrB-4 icd-16 mdh-24 purA-8 recA-14). So ST58 is not merely missing from
+      S. flexneri; it is present in S. sonnei.
+
+      GCF_002290495.1 and GCF_002290505.1 are 0.000036 apart and are the same organism. Neither is
+      S. flexneri. GCF_002290505.1 was reported in our 2026-10-23 message; this completes the pair.
+
+As before we are reporting this for review with the submitter and are not requesting a taxonomy
+change. Happy to supply the MLST outputs or distance matrices. The evidence for each record is kept
+with our curation notes at
+https://github.com/duceppemo/mashID/blob/master/curation/label_corrections.tsv
+and the reasoning at
+https://github.com/duceppemo/mashID/blob/master/curation/README.md
+
+With thanks for your work on these resources,
+
+Marc-Olivier Duceppe
+Canadian Food Inspection Agency
+[contact address omitted from this copy]
