@@ -197,7 +197,7 @@ REGISTRY: dict[str, RemoteDatabase] = {
             md5="44e174ffc7b388d13e456bf9de92802b",
             size=346_965_392,
             description="proGenomes v3 representative genomes (all bacteria and archaea).",
-            doi="10.6084/m9.figshare.22312282.v1",
+            doi="10.6084/m9.figshare.22312282.v2",
         ),
         RemoteDatabase(
             name="refseq_bacteria",
@@ -208,7 +208,7 @@ REGISTRY: dict[str, RemoteDatabase] = {
             description="RefSeq bacteria as of 2023-01-19, dereplicated at 99% identity: 82,557 references "
                         "across 32,750 organisms, with current NCBI names and TaxIDs for 82,547 of them. "
                         "k=21, s=1000. Three years old; prefer 'progenomes4' for current names at species level.",
-            doi="10.6084/m9.figshare.22312240.v3",
+            doi="10.6084/m9.figshare.22312240.v4",
             # The sketch is from 2023 and unchanged. v3 adds the metadata sidecar it never had, so its
             # names and TaxIDs now come from NCBI rather than from each reference's fasta header, and
             # the curated label corrections reach it. The ten references withdrawn from RefSeq since
