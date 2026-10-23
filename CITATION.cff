@@ -5,7 +5,7 @@ title: "mashID: species identification from genome assemblies and raw reads usin
 authors:
   - family-names: Duceppe
     given-names: Marc-Olivier
-version: 0.3.1
+version: 0.3.2
 date-released: "2026-10-23"
 doi: 10.5281/zenodo.23598795
 identifiers:

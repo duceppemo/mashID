@@ -78,7 +78,7 @@ maintained in [`docs/wiki`](docs/wiki):
 
 If mashID is useful in your work, please cite it (see [`CITATION.cff`](CITATION.cff)):
 
-> Duceppe, M.-O. (2026). mashID: species identification from genome assemblies and raw reads using Mash (v0.3.1). Zenodo. https://doi.org/10.5281/zenodo.22888109
+> Duceppe, M.-O. (2026). mashID: species identification from genome assemblies and raw reads using Mash (v0.3.2). Zenodo. https://doi.org/10.5281/zenodo.22888109
 
 and Mash: Ondov et al. (2016) *Mash: fast genome and metagenome distance estimation using MinHash*, Genome Biology 17:132. https://doi.org/10.1186/s13059-016-0997-x
 

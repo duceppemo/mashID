@@ -168,10 +168,13 @@ REGISTRY: dict[str, RemoteDatabase] = {
             description="All 19,625 viral genomes and segments of NCBI RefSeq release 237 (6427 phages), ICTV "
                         "species names and TaxIDs. k=21, s=2000. Virus identification and prophage or viral "
                         "contamination detection; no reference-length filter is applied.",
-            doi="10.6084/m9.figshare.34018548.v1",
+            doi="10.6084/m9.figshare.34018548.v2",
             metadata_url="https://ndownloader.figshare.com/files/69440463",
             metadata_md5="eaff27b0ff31105d6b2619247cfde6be",
             metadata_size=3_956_486,
+            confusable_url="https://ndownloader.figshare.com/files/70557921",
+            confusable_md5="b6aeae8fe3cb4dac3426507a68d10eb7",
+            confusable_size=67_027,
         ),
         RemoteDatabase(
             name="progenomes4",

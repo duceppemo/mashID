@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+## 0.3.2 (2026-10-23)
+
+### Added
+- `refseq_viral` ships a confusable table: 765 rows over 421 of its 19,625 references. Most are
+  what such a table is for, entries that k=21 cannot separate, like the *Flavobacterium* phages
+  Fpv5, Fpv8, Fpv10 and Fpv11 at 0.000012 from each other. Forty rows are one virus under two names
+  at distance zero, where RefSeq carries both the ICTV name and the older familiar one, so there the
+  note means "either name may be reported" rather than "two candidate organisms". An existing
+  install picks the table up with `mashID_download_db refseq_viral`, which fetches the sidecar and
+  leaves the 290 MB sketch alone.
+- `scripts/build_taxon_db.sh` writes the confusable table itself, as a fifth step, so a build no
+  longer produces two of the three files a database ships.
+
+### Changed
+- `listeria` and `progenomes4` were checked and need no confusable table: of the 11,660 *Listeria*
+  reference pairs within 0.005 of each other, none carries two different organism names, and no two
+  `progenomes4` references are within 0.005 at all. Both results are recorded on the Databases page,
+  since an absent table otherwise looks like an omission.
+- `refseq_bacteria` is marked as superseded in practice by `progenomes4`, which covers the same
+  broad-screening niche with current names, and is deliberately left without a confusable table.
+
 ## 0.3.1 (2026-10-23)
 
 ### Changed
