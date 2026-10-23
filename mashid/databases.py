@@ -58,7 +58,7 @@ REGISTRY: dict[str, RemoteDatabase] = {
             description="Mycobacteriaceae (NCBI taxon 1762): 16,433 GenBank assemblies as of 2026-10-22, "
                         "dereplicated per species at 99.9% identity to 3728 references, with NCBI TaxIDs. "
                         "k=21, s=10000.",
-            doi="10.6084/m9.figshare.33965176.v3",
+            doi="10.6084/m9.figshare.33965176.v4",
             # v3 is a rebuild with the curated label corrections applied before binning, so the two
             # mislabelled references v2 renamed are gone: binned with their true relatives they were
             # near-duplicates and dereplication dropped them.
@@ -114,7 +114,7 @@ REGISTRY: dict[str, RemoteDatabase] = {
                         "subspecies, with NCBI TaxIDs. k=21, s=10000. 29 mislabelled references were corrected "
                         "before binning. Species/subspecies level; serovars in names are those of the nearest "
                         "reference, not a serotype call.",
-            doi="10.6084/m9.figshare.33968917.v2",
+            doi="10.6084/m9.figshare.33968917.v3",
             metadata_url="https://ndownloader.figshare.com/files/70524915",
             metadata_md5="c1872d8a0be34c604f6ad1ec298bda32",
             metadata_size=425_546,
@@ -132,7 +132,7 @@ REGISTRY: dict[str, RemoteDatabase] = {
                         "2026-10-22, dereplicated at 99.97% identity to 395 references (29 species) with NCBI "
                         "TaxIDs. k=21, s=10000. 3 mislabelled references were corrected before binning. "
                         "Classical species are nearest-reference calls; biovars not resolved.",
-            doi="10.6084/m9.figshare.33970168.v2",
+            doi="10.6084/m9.figshare.33970168.v3",
             metadata_url="https://ndownloader.figshare.com/files/70524936",
             metadata_md5="c8759d5b7c31b30dac1dcee8bc0cc686",
             metadata_size=103_110,
@@ -150,7 +150,7 @@ REGISTRY: dict[str, RemoteDatabase] = {
                         "2026-10-22, dereplicated to 4510 references with NCBI TaxIDs. k=21, s=10000. Two "
                         "mislabelled Shigella references were corrected before binning. Species level; Shigella "
                         "species other than sonnei/flexneri are not reliably separable.",
-            doi="10.6084/m9.figshare.33969760.v2",
+            doi="10.6084/m9.figshare.33969760.v3",
             metadata_url="https://ndownloader.figshare.com/files/70524876",
             metadata_md5="a88cd194435a742f1b6055bcd043cfbf",
             metadata_size=1_095_360,
