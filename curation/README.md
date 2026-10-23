@@ -63,9 +63,27 @@ reach either column. The corrections were applied on 2026-10-22 (backups `bins.t
 binning table covers every genome that was binned, not just the references that survived
 dereplication, which is why salmonella changes 29 rows here against 16 in its sidecar.
 
+The `derep/` tree keeps each genome in a directory named for the bin it was binned as, so a
+mislabelled reference stays filed under the wrong species until its file is moved there too — which
+the tables alone do not do. Moved on 2026-10-22: 16 genomes in salmonella, 3 in brucella, 1 in
+escherichia and the 2 mycobacteriaceae ones corrected the day before, 22 in all, and the
+`Source_File` column of each sidecar was repointed at the new location. Only a row whose recorded
+path no longer resolved was repointed, and only to a file of the same accession, so the column
+cannot be made to name a different genome; afterwards every `Source_File` in all five taxon
+databases resolves. Two things the move does not fix, by design:
+
+- `mash info` on the `.msh` still shows the path the genome had when it was sketched. The sketch is
+  self-contained and identification never reads these files, so this is a provenance record, not a
+  broken reference.
+- the destination bin was dereplicated without this genome, so the tree now holds a member that was
+  never compared against its new neighbours, and the per-bin `*.log` files still describe the
+  original run. The 2026-10-22 rebuild is what resolves that: there the corrected genomes were
+  binned with their true relatives from the start, and the near-duplicates among them were dropped.
+
 All four binning tables of the 2026-10-22 rebuilds report zero changes against the same curation
-file, which is the check that `bin_by_species.py --corrections` really did apply all 36 at build
-time. Re-running on the repaired September tables also changes nothing, and every row's `Bin` still
+file, and every corrected genome in their `binned/` and `derep/` trees is already in the right
+directory, which is the check that `bin_by_species.py --corrections` really did apply all 36 at
+build time. Re-running on the repaired September tables also changes nothing, and every row's `Bin` still
 agrees with `species_of` of its own `Organism` at that table's rank — the guard against correcting
 one row at a rank different from every other.
 
