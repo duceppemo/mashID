@@ -13,9 +13,9 @@ mashID_download_db --all --dir /db    # download everything somewhere else
 
 The databases dated 2026-10-22 need mashID 0.3.0 or newer: the download registry ships in the
 package, and 0.2.9 fetches the 2026-09-22 set instead (`mashID --version` to check, and
-`mashID_download_db --list` to see what your copy knows about).
+`mashID_download_db` with no arguments to list what your copy knows about).
 
-Sizes are the whole download: sketch plus any sidecars. `mashID_download_db --list` shows the
+Sizes are the whole download: sketch plus any sidecars. `mashID_download_db` with no arguments lists the
 sketch alone, and a fetch prints each file's size as it goes, so neither prints this total.
 Mebibytes, as everywhere else in the output.
 
@@ -95,7 +95,7 @@ assembly report (`--annotate --assembly-report`) or a curated `--metadata` table
 | `refseq_viral` | 2026-09-28 | `scripts/build_virus_db.sh`: the viral division of RefSeq release 237 from the NCBI FTP release files, split into one file per record, names and TaxIDs from the GenBank flat file (`scripts/refseq_gbff_metadata.py`), sketched k=21, s=2000, no length filter, no dereplication (one reference per species or segment). 19,625 references. | Names are RefSeq's ORGANISM field, i.e. ICTV species names ("limnipivirus B1"); the familiar name is in `Description`. Segmented viruses appear as separate segments. Divergent viruses without a close RefSeq relative are not detected at k=21. Tested: RefSeq phages self-match at identity 1; two *S.* Infantis assemblies show a complete Salmonella phage MET_P1_103_31 prophage at 0.9996; *M. bovis* assemblies and reads give no hit. |
 | `progenomes4` | 2026-09-22 | `scripts/build_progenomes_db.sh`: the proGenomes 4 representatives multi-fasta (45.9 GB) split per assembly accession, names and TaxIDs fetched from NCBI Datasets for every accession, sketched k=21, s=2000, no dereplication (one genome per species cluster already). Its `Source_File` column names that archive (`https://progenomes.embl.de/data/repGenomes/pg4_genomes_representatives.fna.gz`) rather than the per-genome file the build split out of it: the split directory was a 45.9 GB intermediate and was deleted after the sketch, and each file was named `<Accession>.fna`, so the `Accession` column already says which record of the archive a reference is. | Single representative per species, so identities of 0.95 to 0.99 are normal; use a group-specific database for finer resolution. `--check` reports 2230 epithets shared across genera and 91 references named "bacterium" or similar: expected at this scale, not synonyms. |
 | `progenomes3` | 2023-03 | proGenomes v3 representative genomes, sketched from the proGenomes fasta. | Header format differs from NCBI's; names come from the sidecar generated on first use, check them with `--check`. Superseded by `progenomes4`. |
-| `refseq_bacteria` | 2023-01-19 | RefSeq bacteria, dereplicated at 0.01. A metadata sidecar was added in 2026-10-22 from NCBI Datasets (`make_mashID_db --annotate --assembly-report`), without touching the 2023 sketch. | Large (671 MB with the sidecar); three years old. |
+| `refseq_bacteria` | 2023-01-19 | RefSeq bacteria, dereplicated at 0.01. A metadata sidecar was added on 2026-10-22 from NCBI Datasets (`make_mashID_db --annotate --assembly-report`), without touching the 2023 sketch. | Large (671 MB with the sidecar); three years old. |
 
 `mycobacteriaceae-2025`, `listeria-2025` and `progenomes3` ship without a metadata sidecar, so
 mashID parses each reference's name from its own fasta header on every run. Two consequences
@@ -255,7 +255,7 @@ NCBI's own ANI check is where to start looking, but it does not settle the quest
   declared species has no type assembly, as across the *M. tuberculosis* complex.
 - `mismatch` — the best-matching type assembly is a *different* species. Worth investigating, though
   most hits are genus reclassifications (*Mycobacterium* → *Mycolicibacterium*) or reciprocal synonym
-  pairs: of 3,534 references in `mycobacteriaceae`, 38 were flagged and 2 were real.
+  pairs: of 3,534 references in `mycobacteriaceae`, 46 were flagged and 2 were real.
 
 Confirm before relabelling, with evidence that suits the group. ANI against the type strain of both
 candidate species decides it for most genera; within the *M. tuberculosis* complex, where ANI is
@@ -292,6 +292,7 @@ make_mashID_db -i binned/ -o /path/to/db -p my_database \
 
 ## Choosing a sketch size
 
-The pre-built Mycobacteriaceae database uses s=1000, which resolves species but yields coarse
-identities (steps of 0.001). For a custom database aimed at close relatives, s=10000 is worth the
-tenfold larger file: identities become finer and the shared-hash counts more informative.
+The pre-built taxon databases use s=10000, and the two 2025 ones (`mycobacteriaceae-2025`,
+`listeria-2025`) s=1000, which resolves species but yields coarse identities in steps of 0.001.
+For a custom database aimed at close relatives, s=10000 is worth the tenfold larger file:
+identities become finer and the shared-hash counts more informative.

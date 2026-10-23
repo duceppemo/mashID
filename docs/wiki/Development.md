@@ -37,6 +37,12 @@ headers, and `tests/test_example.py` keeps the shipped example's results exact.
 ## Releasing
 
 1. Update the version in `mashid/__init__.py`, `pyproject.toml` and `CITATION.cff` (a test checks they agree) and add a section to `CHANGELOG.md`. Run `pytest` and check its exit status before tagging.
+   Three places quote a version without any test noticing: the citation line in `README.md`, the
+   `pip install .../tags/vX.Y.Z.tar.gz` line in `docs/wiki/Installation.md`, and `recipe/meta.yaml`
+   (step 4). The first two are only correct once the tag exists, so push the tag in the same
+   sitting. If a release changes which pre-built databases the registry points at, say in
+   `docs/wiki/Databases.md` which version those rows need, since an older install silently fetches
+   the older set.
 2. Commit, then tag: `git tag -a vX.Y.Z -m "mashID X.Y.Z" && git push origin master vX.Y.Z`.
 3. `.github/workflows/release.yml` builds the wheel and creates the GitHub release with the
    changelog section as notes. Zenodo archives the release automatically and mints a version DOI

@@ -22,7 +22,7 @@ To install a version that is not on bioconda yet:
 ```bash
 conda create -n mashID -c conda-forge -c bioconda python=3.12 pip mash=2.3 python-isal
 conda activate mashID
-pip install https://github.com/duceppemo/mashID/archive/refs/tags/v0.2.9.tar.gz
+pip install https://github.com/duceppemo/mashID/archive/refs/tags/v0.3.0.tar.gz
 mashID -h
 ```
 

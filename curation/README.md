@@ -113,7 +113,9 @@ Two independent checks agree on which rows were truncated. progenomes4 was re-de
 assembly report — match name for name after the repair; the two that differ are the two curated
 corrections, which `apply_label_corrections.py` then applies. Only a change where the stored name is
 a prefix of the re-derived one followed by a comma was accepted: a curated annotation is *entitled*
-to differ from the fasta header (12 of the 387 brucella rows are `Ochrobactrum anthropi` headers annotated
+to differ from the fasta header (10 of the 387 brucella rows carry an *Ochrobactrum* header under a
+*Brucella* annotation: 4 *O. anthropi*, 4 *O. intermedium*, one each *O. tritici* and
+*O. pseudintermedium*; the four `Ochrobactrum anthropi` headers are annotated
 as `Brucella anthropi`), and overwriting those from the header would undo real curation.
 
 ## Upstream status
@@ -194,8 +196,8 @@ distance versus 0.009-0.012 for the six genuine *goodii*. It is left labelled as
 ## The 2026-10-22 sweep of the six databases built from NCBI assemblies
 
 Six of the pre-built databases, the ones whose references carry assembly accessions and NCBI names.
-`mycobacteriaceae` is not in the table because its two corrections were found earlier, by the same
-method; `mycobacteriaceae-2025`, `listeria-2025`, `progenomes3` and `refseq_bacteria` are not,
+`mycobacteriaceae` is not in the table because its two corrections were found earlier, by screening
+NCBI's ANI `mismatch` flags rather than by this sweep; `mycobacteriaceae-2025`, `listeria-2025`, `progenomes3` and `refseq_bacteria` are not,
 because at the time they had no metadata sidecar to audit.
 
 Each database's `--confusable` table was computed and then read the way the Databases page
@@ -227,8 +229,9 @@ scheme for *Shigella*, and SISTR cgMLST for *Salmonella*, each run against contr
 same database so that the test was shown to separate the species before it was trusted. MLST also
 settled which member of a near-identical pair was wrong, which distance alone cannot do.
 
-**Where the bad labels concentrate.** All 87 references of the salmonella database not labelled
-subsp. *enterica* — 70 carrying another subspecies name, 17 *S. bongori* — were checked with SISTR,
+**Where the bad labels concentrate.** All 87 references of the salmonella database whose label
+names something other than subsp. *enterica* — 70 another subspecies, 17 *S. bongori*; the rest are
+subsp. *enterica* or a bare *S. enterica* — were checked with SISTR,
 plus 30 *enterica* as a control: 15 of the 102 conclusive calls
 are contradicted, and the rate tracks how rare the label is — `arizonae` 7 of 10, `houtenae` 2 of 3,
 `indica` 1 of 5, `diarizonae` 3 of 29, `salamae` 2 of 23, `enterica` 0 of 30. A rare subspecies name
@@ -243,7 +246,8 @@ every rebuild; an audit of the previous database does not cover the new assembli
 
 **Type the whole submission batch, not the surviving references.** Auditing survivors re-discovers
 one batch a record at a time, because every correction changes which genomes dereplication keeps:
-two of the rows here were found exactly that way, one on each of two later salmonella rebuilds.
+two of the rows here were found exactly that way, both while auditing the survivors of the first
+salmonella rebuild.
 Typing both submissions exhaustively — all 27 assemblies making an explicit non-*enterica*
 subspecies claim, where only 6 were references in the audited database and 3 of those 6 type as
 deposited — ended it and produced 11 further corrections, with no inconclusive calls. The result is sharper than "batches are
@@ -257,7 +261,8 @@ the submitter or the date. All four `subsp. arizonae` records in the Sichuan Agr
 
 **The audit's own blind spot: a common label on a rare subspecies.** Screening rare labels is right
 because that is where the *rate* is highest, but it cannot find the reverse error, and 30 subsp.
-*enterica* controls out of roughly 3,000 references is not coverage of the common class. Once the
+*enterica* controls against the 1,355 references carrying that label or a bare *S. enterica* is not
+coverage of the common class. Once the
 other corrections had collapsed their pairs, exactly one sub-threshold cross-name pair was left in
 the salmonella database, and it was this: `GCF_016903075.1`, deposited subsp. *enterica*, is subsp.
 *salamae* serovar II 58:d:z8 on 330 alleles — 0.000542 from `GCF_002034565.1`, deposited *and*
