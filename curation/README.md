@@ -63,6 +63,18 @@ reach either column. The corrections were applied on 2026-10-22 (backups `bins.t
 binning table covers every genome that was binned, not just the references that survived
 dereplication, which is why salmonella changes 29 rows here against 16 in its sidecar.
 
+That twin match changes nothing anywhere else, which was checked rather than assumed. Of the 36
+rows, 31 are written as GCF and 5 as GCA, because each was recorded with the accession as it
+appeared in the database where the mislabel was found — so every other database already matched its
+corrections under its own prefix. Audited against the full input sets a rebuild would read, not
+just the binned subsets: 2,022 *Brucella*, 21,543 *Salmonella*, 58,198 *Escherichia*/*Shigella*,
+16,433 *Mycobacteriaceae* and 32,887 proGenomes 4 assemblies, 131,083 in all, plus every built
+table. **Zero** are reachable only via the twin, and none is the same assembly at a different
+version. So rebuilding those databases for the twin match would reproduce what is already on disk;
+`refseq_bacteria` was the only database it could reach, and the only one never curated against,
+having been built in 2023 from RefSeq while the *M. goodii* genome was examined in the
+GenBank-based mycobacteriaceae set.
+
 `refseq_bacteria`, which had no sidecar at all, was given one on the same day (82,547 of 82,557
 references annotated from NCBI Datasets) and five of the corrections fall inside it. One of those
 five is the reason `read_corrections` now registers each row under both accessions of its assembly:
