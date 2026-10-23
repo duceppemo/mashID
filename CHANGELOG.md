@@ -2,6 +2,40 @@
 
 ## Unreleased
 
+## 0.3.0 (2026-10-23)
+
+### Changed
+- The pre-built `mycobacteriaceae`, `salmonella`, `brucella` and `escherichia` databases are
+  rebuilt (2026-10-22) with the curated label corrections applied before binning, so a mislabelled
+  reference is no longer merely renamed: filed with its true relatives, several turn out to be
+  near-duplicates and dereplication drops them. References: mycobacteriaceae 3534 -> 3728,
+  salmonella 1442 -> 1436, escherichia 4503 -> 4510, brucella 387 -> 395. `escherichia`,
+  `salmonella` and `brucella` now also ship the `.confusable.tsv` table of inseparable organism
+  pairs, which only `mycobacteriaceae` did. **This release is needed to download them**: 0.2.9
+  fetches the 2026-09-22 set.
+- `refseq_bacteria` ships a metadata sidecar for the first time, with current NCBI names and TaxIDs
+  for 82,547 of its 82,557 references; its 2023 sketch is unchanged. Its names used to be parsed
+  from each reference's own fasta header, and no curated correction could reach it.
+- A curated label correction now applies to both accessions of its assembly: one assembly has a
+  GenBank and a RefSeq accession, and a name curated for either holds for both. This is how the
+  *Mycolicibacterium goodii* correction, recorded as `GCA_025822535.1`, reaches `refseq_bacteria`,
+  which carries `GCF_025822535.1`.
+
+### Fixed
+- Organism names were truncated at the first comma, which mattered most for *Salmonella* antigenic
+  formulae: a reference deposited as `serovar 1,4,[5],12:i:-` — monophasic Typhimurium — was
+  reported as `serovar 1`, and `serovar 18:z4,z23:-` as `serovar 18:z4`. A comma inside a
+  designation is part of the name; one that separates words is not, including in the space-less
+  form proGenomes 3 writes ("ORS278,complete sequence"). Semicolons are treated the same way.
+  Truncation also merged distinct serovars, hiding confusable pairs: the salmonella table gained 71
+  rows once the names were whole.
+- `make_mashID_db --metadata` matches paired accessions as the binner does, so a build can no
+  longer bin a reference under its corrected species and then report the name it was deposited
+  under.
+- `bin_by_species.py` writes `bins.tsv` only once binning has finished, so a build interrupted
+  partway through is re-binned rather than dereplicated as if it were complete, and counts
+  corrections per assembly rather than per accession.
+
 ## 0.2.9 (2026-10-22)
 
 ### Fixed

@@ -364,3 +364,64 @@ def test_bins_table_appears_only_once_it_is_complete(tmp_path, monkeypatch):
     assert binner.main() == 0
     assert seen == {"partial_existed": True, "final_existed_before": False}
     assert (out / "bins.tsv").is_file() and not (out / "bins.tsv.partial").exists()
+
+
+def test_a_failed_binning_run_leaves_no_bins_table(tmp_path, monkeypatch):
+    """The marker must not appear when the run dies inside the per-bin loop, which is the case it
+    exists for: the shell would otherwise dereplicate a partial binning as if it were complete."""
+    import json
+
+    data = tmp_path / "data" / "GCF_1.1"
+    data.mkdir(parents=True)
+    (data / "GCF_1.1_genomic.fna").write_text(">x\nACGT\n")
+    report = tmp_path / "report.jsonl"
+    report.write_text(json.dumps({"accession": "GCF_1.1",
+                                  "organism": {"organismName": "Genusa one", "taxId": 111}}) + "\n")
+    out = tmp_path / "out"
+
+    def boom(*_args, **_kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(binner.os, "symlink", boom)
+    monkeypatch.setattr("sys.argv", ["bin_by_species.py", str(report), str(tmp_path / "data"), str(out)])
+    with pytest.raises(OSError, match="disk full"):
+        binner.main()
+    assert not (out / "bins.tsv").exists(), "a failed run must not leave the completion marker"
+    assert (out / "bins.tsv.partial").exists()
+
+
+def test_a_metadata_row_beats_the_twin_it_was_registered_under(tmp_path):
+    """Both accessions of an assembly can appear explicitly, with different names: each keeps its
+    own, and neither is overwritten by the other's pairing."""
+    from mashid.makedb import load_annotations
+
+    table = tmp_path / "meta.tsv"
+    table.write_text("Accession\tOrganism\tTaxID\n"
+                     "GCA_000000001.1\tGenusa one\t111\n"
+                     "GCF_000000001.1\tGenusb two\t222\n")
+    annotations = load_annotations(table, None)
+    assert annotations["GCA_000000001.1"] == ("Genusa one", "111")
+    assert annotations["GCF_000000001.1"] == ("Genusb two", "222")
+
+
+def test_a_placeholder_name_is_not_paired_onto_the_other_accession(tmp_path):
+    """A sidecar fed back through --metadata carries NA, or the accession itself, where no name
+    could be read. Pairing those would replace a good assembly-report name with a placeholder."""
+    import json
+
+    from mashid.makedb import load_annotations
+
+    table = tmp_path / "meta.tsv"
+    table.write_text("Accession\tOrganism\tTaxID\n"
+                     "GCA_000000001.1\tNA\tNA\n"
+                     "GCA_000000002.1\tGCA_000000002.1\tNA\n")
+    report = tmp_path / "assembly_data_report.jsonl"
+    report.write_text("\n".join(json.dumps(r) for r in [
+        {"accession": "GCF_000000001.1", "organism": {"organismName": "Genusa one", "taxId": 111}},
+        {"accession": "GCF_000000002.1", "organism": {"organismName": "Genusb two", "taxId": 222}},
+    ]) + "\n")
+    annotations = load_annotations(table, report)
+    assert annotations["GCF_000000001.1"] == ("Genusa one", "111")
+    assert annotations["GCF_000000002.1"] == ("Genusb two", "222")
+    # the explicit rows keep their placeholder, which is what the table actually says
+    assert annotations["GCA_000000001.1"] == ("NA", "NA")

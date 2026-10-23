@@ -129,7 +129,8 @@ def main() -> int:
         # Counted per assembly, not per key: a correction is registered under both the GenBank and
         # the RefSeq accession of its assembly, so counting keys doubles the total and reports an
         # applied row's twin as unmatched.
-        print(f"{len(applied)} of {len(assemblies(corrections))} label correction(s) applied", file=sys.stderr)
+        print(f"{len(assemblies(applied))} of {len(assemblies(corrections))} label correction(s) applied",
+              file=sys.stderr)
         unused = sorted(assemblies(corrections) - assemblies(applied))
         if unused:
             # One curation file covers every database, so most of its rows belong to other taxa.

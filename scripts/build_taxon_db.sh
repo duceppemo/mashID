@@ -68,11 +68,17 @@ report=ncbi/ncbi_dataset/data/assembly_data_report.jsonl
 
 # One dehydrated archive per taxon (ncbi_<taxid>/), merged into ncbi/ through symbolic links.
 for taxid in ${taxa//,/ }; do
-    if [[ ! -f "ncbi_$taxid/ncbi_dataset/data/assembly_data_report.jsonl" ]]; then
+    # The marker is written after unzip, not taken from a file inside the archive: unzip creates
+    # the data report partway through extracting, so a run killed during it would leave the step
+    # looking finished with a truncated report or no fetch.txt for the rehydration below.
+    if [[ ! -f "ncbi_$taxid/.downloaded" ]]; then
         log "1. Downloading the dehydrated archive for taxon $taxid ($source assemblies)"
         datasets download genome taxon "$taxid" --assembly-source "$source" --exclude-atypical \
             --include genome --dehydrated --filename "ncbi_$taxid.zip" "${api[@]}"
         unzip -q -o "ncbi_$taxid.zip" -d "ncbi_$taxid"
+        [[ -f "ncbi_$taxid/ncbi_dataset/data/assembly_data_report.jsonl" ]] \
+            || { echo "no assembly data report in ncbi_$taxid.zip" >&2; exit 1; }
+        touch "ncbi_$taxid/.downloaded"
     fi
     log "1. Rehydrating genomes of taxon $taxid (gzipped, 10 workers)"
     datasets rehydrate --directory "ncbi_$taxid" --gzip --max-workers 10 "${api[@]}"

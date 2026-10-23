@@ -72,7 +72,14 @@ def load_annotations(metadata: Path | None, assembly_report: Path | None) -> dic
         # corrected species and then reports the deposited name, which the assembly report supplied
         # for the other accession. Pairing after the update keeps an explicit row winning over a
         # twin, and both winning over the report.
-        annotations.update(with_paired_accessions({acc: (e.organism, e.taxid) for acc, e in table.items()}))
+        named = {acc: (e.organism, e.taxid) for acc, e in table.items()}
+        # Only a real name answers for the other accession. A sidecar fed back in through
+        # --metadata carries NA where a header did not parse, and the accession itself where no
+        # organism could be read at all; pairing those would replace a good assembly-report name
+        # for the twin with a placeholder.
+        paired = with_paired_accessions({acc: v for acc, v in named.items()
+                                         if v[0] not in (NA, "", acc)})
+        annotations.update({**paired, **named})
         log.info("Loaded %d organism(s) from %s", len(table), metadata)
     return annotations
 

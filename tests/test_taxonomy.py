@@ -42,6 +42,13 @@ from mashid.taxonomy import clean_comment, organism_from_comment
         # semicolons separate words in a header exactly as commas do
         ("114615.SAMEA3138227.CU234118 Bradyrhizobium sp. ORS278;complete sequence",
          "Bradyrhizobium sp. ORS278"),
+        # a doubled or mixed separator must not be left hanging on the kept part
+        ("114615.SAMEA3138227.CU234118 Bradyrhizobium sp. ORS278,,complete sequence",
+         "Bradyrhizobium sp. ORS278"),
+        ("114615.SAMEA3138227.CU234118 Bradyrhizobium sp. ORS278,;complete sequence",
+         "Bradyrhizobium sp. ORS278"),
+        # a stop word opening the token still stops the name, rather than becoming part of it
+        ("NZ_X.1 Mycobacterium bovis genome,ORS278,complete", "Mycobacterium bovis"),
     ],
 )
 def test_organism_from_comment(comment, expected):

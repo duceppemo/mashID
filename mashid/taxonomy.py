@@ -68,12 +68,18 @@ def _tokens(text: str) -> list[str]:
         if not tok:
             continue
         segments = _SEPARATOR.split(tok)
-        cut = next((i for i, s in enumerate(segments) if i and s.lower() in _STOP_WORDS), None)
+        cut = next((i for i, s in enumerate(segments) if s.lower() in _STOP_WORDS), None)
         if cut is None:
             tokens.append(tok)
             continue
-        at = sum(len(s) for s in segments[:cut]) + cut - 1  # the separator before segments[cut]
-        tokens.append(tok[:at])
+        # Every separator is one character, so the one before segments[cut] is at this offset; it is
+        # -1 when the stop word opens the token, which then has no head to keep. What precedes the
+        # cut keeps its own separators, which a designation needs; what follows is header text and
+        # is split on every separator. An empty segment before the stop word ("ORS278,,complete")
+        # would otherwise leave the head ending in a separator.
+        at = sum(len(s) for s in segments[:cut]) + cut - 1
+        if (head := tok[:at].rstrip(",;")) and at >= 0:
+            tokens.append(head)
         tokens.extend(s for s in _SEPARATOR.split(tok[at + 1:]) if s)
     return tokens
 
