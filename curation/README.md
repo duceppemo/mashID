@@ -153,20 +153,23 @@ Corrections are reported to GenBank/RefSeq (`gb-admin@ncbi.nlm.nih.gov`, cc
   *S. flexneri*. `GCF_002290495.1` sits 0.000074 from the deposited *S. sonnei* `GCF_002248355.1`,
   also ST58, against 0.005480 from its nearest *S. flexneri*.
 
-Those reports cover 36 of the 46 rows: 2 mycobacteriaceae, then 3 *Brucella* with 15 *Salmonella*,
-on 2026-10-22; 14 *Salmonella* and `GCF_002290505.1` on 2026-10-23; `GCF_002290495.1` in the
-correction that followed. `GCF_002266055.1`, named in the first report as examined but not reported,
-has no row here: it never met the evidence bar in [When to add a row](#when-to-add-a-row).
+- **2026-10-23** — the 10 *Brucella* rows from the re-audit of the 2026-10-22 rebuild:
+  `GCA_000250775.2`, `GCA_000250835.2`, `GCA_000292125.1`, `GCA_009823695.1`, `GCA_016091955.1`,
+  `GCA_016091965.1`, `GCA_018604785.1`, `GCA_041861985.1`, `GCA_055389085.1` and
+  `GCA_000662015.2`. Grouped by what the deposited name gets wrong, with the two independent tests
+  per record, and saying of `GCA_000662015.2` only what we could verify ourselves — a classical
+  *Brucella*, not *B. inopinata* — while attributing the *canis* call to the paper. Four of the ten
+  NCBI already flags `mismatch`; the rest pass its ANI check, which for *Brucella* means little,
+  since every member sits within about 97% ANI of every other and a declared species clears the 95%
+  threshold without being the closest, so five of the ten carry `species_match` or `synonym_match`.
+  Sent as
+  [`reports/2026-10-23_ncbi_brucella.txt`](reports/2026-10-23_ncbi_brucella.txt).
 
-**Not yet sent — the 10 *Brucella* rows added on 2026-10-23**, from the re-audit of the 2026-10-22
-rebuild: `GCA_000250775.2`, `GCA_000250835.2`, `GCA_000292125.1`, `GCA_009823695.1`,
-`GCA_016091955.1`, `GCA_016091965.1`, `GCA_018604785.1`, `GCA_041861985.1`, `GCA_055389085.1` and
-`GCA_000662015.2`. Four of them NCBI already flags `mismatch`; the rest pass its ANI check, which
-for *Brucella* means little, since every member sits within about 97% ANI of every other and a
-declared species clears the 95% threshold without being the closest. The report is drafted at
-[`reports/DRAFT_ncbi_brucella.txt`](reports/DRAFT_ncbi_brucella.txt), grouped by what the deposited
-name gets wrong, and it says of `GCA_000662015.2` only what we could verify ourselves — a classical
-*Brucella*, not *B. inopinata* — attributing the *canis* call to the paper.
+**All 46 rows have now been reported, and nothing is awaiting a send**: 2 mycobacteriaceae, then 3
+*Brucella* with 15 *Salmonella*, on 2026-10-22; 14 *Salmonella* and `GCF_002290505.1` on
+2026-10-23, then `GCF_002290495.1` in the correction that followed; and the 10 *Brucella* rows the
+same day. `GCF_002266055.1`, named in the first report as examined but not reported, has no row
+here: it never met the evidence bar in [When to add a row](#when-to-add-a-row).
 
 The lesson from the third report is about the cross-reference, not the biology: a claim about *what
 we have already told NCBI* is as checkable as a claim about a genome, and it was the only kind here
